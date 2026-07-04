@@ -11,13 +11,16 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="brand">
+    <div class="brand" data-view="home" role="button" tabindex="0">
       <h1>诗渊</h1>
       <span class="brand-sub">古诗古文 · 溯源</span>
     </div>
     <nav class="tabs" id="viewTabs">
-      <button data-view="library" class="active">诗文库</button>
+      <button data-view="home" class="active">首页</button>
+      <button data-view="library">诗文库</button>
+      <button data-view="type">体裁</button>
       <button data-view="theme">主题</button>
+      <button data-view="word">字词</button>
       <button data-view="timeline">时间轴</button>
       <button data-view="map">地图</button>
     </nav>
@@ -27,11 +30,32 @@
   </header>
 
   <main id="main">
+    <!-- 首页 -->
+    <section class="view" id="view-home"></section>
+
     <!-- 诗文库 -->
-    <section class="view" id="view-library">
+    <section class="view hidden" id="view-library">
       <div class="filters" id="filters"></div>
       <div class="grid" id="poemGrid"></div>
       <p class="count" id="libCount"></p>
+    </section>
+
+    <!-- 体裁 -->
+    <section class="view hidden" id="view-type">
+      <p class="view-intro">从《诗经》的四言，到楚辞、乐府、古体诗，再到唐人格律严整的近体诗（绝句、律诗），乃至宋词、元曲——诗体的演进，就是一部文言文的呼吸史。下列体裁由每首作品的句式自动归类。</p>
+      <div class="type-nav" id="typeNav"></div>
+      <div class="grid" id="typeGrid"></div>
+      <p class="count" id="typeCount"></p>
+    </section>
+
+    <!-- 字词 -->
+    <section class="view hidden" id="view-word">
+      <p class="view-intro">古人炼字，一字千金。这里可循一个字走进无数诗篇——看"月"如何照过千年，"风"如何吹遍江山。点击字云中的字，或直接搜索任意字词。</p>
+      <div class="word-search">
+        <input type="search" id="wordInput" placeholder="输入一个字或词，如 月、风、江、故乡…" autocomplete="off">
+      </div>
+      <div class="char-cloud" id="charCloud"></div>
+      <div id="wordResult"></div>
     </section>
 
     <!-- 主题 -->
