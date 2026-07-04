@@ -1,0 +1,11 @@
+# 密钥 —— 绝不提交
+.env
+
+# Python 环境与缓存
+.venv/
+tools/.cache/
+__pycache__/
+*.pyc
+
+# 系统文件
+.DS_Store

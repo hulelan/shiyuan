@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>诗渊 · 古诗古文集</title>
+  <meta name="description" content="古诗古文在线库 — 原文、拼音、译文、注释、赏析、英译，并可按主题、时间轴与地图探索。">
+  <!-- Leaflet (地图；离线时自动降级为提示) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <h1>诗渊</h1>
+      <span class="brand-sub">古诗古文 · 溯源</span>
+    </div>
+    <nav class="tabs" id="viewTabs">
+      <button data-view="library" class="active">诗文库</button>
+      <button data-view="theme">主题</button>
+      <button data-view="timeline">时间轴</button>
+      <button data-view="map">地图</button>
+    </nav>
+    <div class="searchbox">
+      <input type="search" id="search" placeholder="搜索标题、作者或诗句…" autocomplete="off">
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 诗文库 -->
+    <section class="view" id="view-library">
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="poemGrid"></div>
+      <p class="count" id="libCount"></p>
+    </section>
+
+    <!-- 主题 -->
+    <section class="view hidden" id="view-theme">
+      <p class="view-intro">按主题浏览——爱情、田园、送别、忧国……看古人如何在同一母题下各抒其怀。</p>
+      <div class="theme-cloud" id="themeCloud"></div>
+      <div class="grid" id="themeGrid"></div>
+    </section>
+
+    <!-- 时间轴 -->
+    <section class="view hidden" id="view-timeline">
+      <p class="view-intro">沿着时间之河，看文言文从《诗经》的四言到唐诗的格律、宋词的长短句，如何一路演变。</p>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <!-- 地图 -->
+    <section class="view hidden" id="view-map">
+      <p class="view-intro">每一首诗都诞生在具体的山川之间。点击地图上的标记，看看哪些名篇写于同一片土地。</p>
+      <div id="mapCanvas"></div>
+      <p class="map-note" id="mapNote"></p>
+    </section>
+  </main>
+
+  <!-- 详情浮层 -->
+  <div class="overlay hidden" id="overlay">
+    <div class="poem-detail" id="poemDetail"></div>
+  </div>
+
+  <footer class="site-footer">
+    <span id="footStat"></span> ·
+    种子数据集，持续扩充中 · 文本仅供学习研究之用
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data/poems.js"></script>
+  <script src="data/corpus.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
