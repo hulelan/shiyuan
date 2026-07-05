@@ -99,15 +99,18 @@
   function poemCard(p) {
     var c = el("div", "card");
     var badge = p.appreciation ? '<span class="card-badge" title="已含赏析">赏</span>' : "";
+    var authorCls = (p.author && p.author !== "佚名") ? "author author-link" : "author";
     c.innerHTML = badge +
       '<span class="dyn">' + p.dynasty + ' · ' + p._form.label + '</span>' +
       '<h3>' + p.title + '</h3>' +
-      '<span class="author">' + p.author + '</span>' +
+      '<span class="' + authorCls + '">' + p.author + '</span>' +
       '<div class="excerpt">' + firstLine(p.text) + '</div>' +
       '<div class="tags">' + (p.themes || []).map(function (t) {
         return '<span class="tag">' + t + '</span>';
       }).join("") + '</div>';
     c.addEventListener("click", function () { openDetail(p.id); });
+    var al = c.querySelector(".author-link");
+    if (al) al.addEventListener("click", function (e) { e.stopPropagation(); goAuthor(p.author); });
     return c;
   }
 
@@ -270,6 +273,64 @@
   function goForm(sub) { state.formSub = sub; state.query = ""; $("#search").value = ""; switchView("type"); }
   function goTheme(t) { state.theme = t; state.query = ""; $("#search").value = ""; switchView("theme"); }
   function goWord(ch) { switchView("word"); $("#wordInput").value = ch; showWord(ch); }
+  function goAuthor(name) {
+    if (!name || name === "佚名") return;
+    state.author = name; switchView("author");
+  }
+
+  // ---------- 作者专页 ----------
+  function renderAuthor() {
+    var name = state.author;
+    var works = POEMS.filter(function (p) { return p.author === name; });
+    var host = $("#view-author");
+    if (!works.length) { switchView("home"); return; }
+    works.sort(function (a, b) { return a.dynastyOrder - b.dynastyOrder || a.year - b.year; });
+
+    var dyns = []; works.forEach(function (w) { if (dyns.indexOf(w.dynasty) < 0) dyns.push(w.dynasty); });
+    var forms = {}; works.forEach(function (w) { forms[w._form.sub] = (forms[w._form.sub] || 0) + 1; });
+    var topForms = Object.keys(forms).sort(function (a, b) { return forms[b] - forms[a]; }).slice(0, 4);
+    var themes = {}; works.forEach(function (w) { (w.themes || []).forEach(function (t) { themes[t] = (themes[t] || 0) + 1; }); });
+    var topThemes = Object.keys(themes).sort(function (a, b) { return themes[b] - themes[a]; }).slice(0, 8);
+    var places = []; works.forEach(function (w) { if (w.place && w.place.name && places.indexOf(w.place.name) < 0) places.push(w.place.name); });
+
+    var lines = [];
+    lines.push('<span class="ap-dyn">' + dyns.join(" · ") + '</span>');
+    lines.push("共收录 <b>" + works.length + "</b> 篇 / 条");
+    if (topForms.length) lines.push("多作 " + topForms.map(function (f) { return "<em>" + f + "</em>"; }).join("、"));
+    var meta = lines.join(" ｜ ");
+
+    var themeHtml = topThemes.length
+      ? '<div class="ap-block"><h4>常写主题</h4><div class="ap-chips">' + topThemes.map(function (t) {
+          return '<button class="mini-chip" data-theme="' + t + '">' + t + '<i>' + themes[t] + '</i></button>';
+        }).join("") + '</div></div>'
+      : "";
+    var placeHtml = places.length
+      ? '<div class="ap-block"><h4>足迹（' + places.length + ' 地）</h4><div class="ap-chips">' +
+          places.slice(0, 20).map(function (pl) { return '<span class="ap-place" data-place="' + pl + '">' + pl + '</span>'; }).join("") +
+          '</div></div>'
+      : "";
+
+    host.innerHTML =
+      '<button class="back-link" id="authorBack">‹ 返回</button>' +
+      '<div class="author-head">' +
+        '<div class="author-seal">' + name.slice(0, 1) + '</div>' +
+        '<h1 class="author-name">' + name + '</h1>' +
+        '<div class="author-meta">' + meta + '</div>' +
+      '</div>' +
+      themeHtml + placeHtml +
+      '<h4 class="ap-works-h">作品</h4>' +
+      '<div class="grid" id="authorGrid"></div>' +
+      '<p class="count" id="authorCount"></p>';
+
+    renderPaged($("#authorGrid"), works, $("#authorCount"));
+    $("#authorBack").addEventListener("click", function () { history.length > 1 ? window.history.back() : switchView("home"); });
+    host.querySelectorAll("[data-theme]").forEach(function (b) {
+      b.addEventListener("click", function () { goTheme(b.getAttribute("data-theme")); });
+    });
+    host.querySelectorAll("[data-place]").forEach(function (b) {
+      b.addEventListener("click", function () { switchView("map"); });
+    });
+  }
 
   // ---------- 首页 ----------
   function poemOfDay() {
@@ -373,9 +434,7 @@
       b.addEventListener("click", function () { goWord(b.getAttribute("data-char")); });
     });
     host.querySelectorAll("[data-author]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        state.query = b.getAttribute("data-author"); $("#search").value = state.query; switchView("library");
-      });
+      b.addEventListener("click", function () { goAuthor(b.getAttribute("data-author")); });
     });
   }
 
@@ -497,11 +556,13 @@
       ? '<div class="pd-place">✎ ' + p.place.name + (p.place.modern ? '（' + p.place.modern + '）' : "") + '</div>'
       : "";
 
+    var authorHtml = (p.author && p.author !== "佚名")
+      ? '<span class="pd-author-link" id="pdAuthor">' + p.author + '</span>' : p.author;
     var d = $("#poemDetail");
     d.innerHTML =
       '<button class="close-btn" id="closeDetail">×</button>' +
       '<div class="pd-head"><h2>' + p.title + '</h2>' +
-      '<div class="pd-meta">' + p.author + seals + '</div>' +
+      '<div class="pd-meta">' + authorHtml + seals + '</div>' +
       (p.yearLabel ? '<div class="pd-meta" style="margin-top:4px">' + p.yearLabel + '</div>' : "") +
       placeHtml + '</div>' +
       '<div class="pd-poem' + (hasPinyin ? "" : " no-pinyin") + (p.genre === "文" ? " prose" : "") + '" id="pdPoem">' + poemHtml + '</div>' +
@@ -516,6 +577,8 @@
       h.addEventListener("click", function () { h.parentNode.classList.toggle("open"); });
     });
     $("#closeDetail").addEventListener("click", closeDetail);
+    var pdA = $("#pdAuthor");
+    if (pdA) pdA.addEventListener("click", function () { closeDetail(); goAuthor(p.author); });
     if (hasPinyin) {
       $("#pyToggle").addEventListener("click", function () {
         var poem = $("#pdPoem");
@@ -547,6 +610,7 @@
     else if (v === "word") renderWord();
     else if (v === "timeline") renderTimeline();
     else if (v === "map") renderMap();
+    else if (v === "author") renderAuthor();
   }
 
   function rerenderCurrent() {

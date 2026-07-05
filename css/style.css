@@ -447,3 +447,47 @@ main { max-width: 1180px; margin: 0 auto; padding: 26px 24px 80px; }
   .type-group-label { min-width: 100%; text-align: left; }
   .home-sec h2 { letter-spacing: 5px; }
 }
+
+/* ============ 作者专页 ============ */
+.author-link { cursor: pointer; border-bottom: 1px dotted var(--gold); transition: color .15s; }
+.author-link:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
+.pd-author-link { cursor: pointer; border-bottom: 1px dotted var(--gold); transition: color .15s; }
+.pd-author-link:hover { color: var(--cinnabar); }
+
+.back-link {
+  font-family: var(--serif); font-size: 14px; letter-spacing: 2px; color: var(--ink-soft);
+  background: none; border: none; cursor: pointer; padding: 4px 0; margin-bottom: 8px;
+}
+.back-link:hover { color: var(--cinnabar); }
+
+.author-head {
+  text-align: center; padding: 14px 16px 26px; border-bottom: 1px solid var(--line); margin-bottom: 22px;
+  position: relative;
+}
+.author-seal {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 60px; height: 60px; border-radius: 6px; background: var(--cinnabar); color: #fbeee0;
+  font-size: 34px; letter-spacing: 0; box-shadow: 0 3px 10px var(--shadow); margin-bottom: 14px;
+}
+.author-name { margin: 0; font-size: 34px; letter-spacing: 6px; color: var(--ink); }
+.author-meta { margin-top: 10px; color: var(--ink-soft); font-size: 14.5px; letter-spacing: 1px; }
+.author-meta b { color: var(--cinnabar); font-size: 17px; }
+.author-meta em { font-style: normal; color: var(--jade); }
+.author-meta .ap-dyn {
+  display: inline-block; background: var(--cinnabar); color: #fbeee0;
+  padding: 1px 10px; border-radius: 3px; font-size: 13px; letter-spacing: 2px; margin-right: 4px;
+}
+.ap-block { text-align: center; margin: 0 auto 18px; max-width: 780px; }
+.ap-block h4 { font-size: 14px; letter-spacing: 3px; color: var(--cinnabar); margin: 0 0 10px; }
+.ap-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ap-place {
+  cursor: pointer; font-size: 13.5px; letter-spacing: 1px; padding: 4px 12px;
+  border: 1px solid var(--line); border-radius: 14px; background: rgba(74,107,90,0.08); color: var(--jade);
+  transition: all .15s;
+}
+.ap-place:hover { background: var(--jade); color: #fff; border-color: var(--jade); }
+.ap-works-h {
+  text-align: center; font-size: 16px; letter-spacing: 5px; color: var(--cinnabar);
+  margin: 26px 0 4px; padding-top: 18px; border-top: 1px solid var(--line);
+}
+.ap-works-h::after { content: ""; display: block; width: 30px; height: 2px; background: var(--gold); margin: 10px auto 18px; }
