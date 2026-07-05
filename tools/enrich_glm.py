@@ -96,25 +96,51 @@ def call_glm(key, poem, timeout=120):
             content = content[4:]
     return json.loads(content)
 
+def _s(v):
+    return v.strip() if isinstance(v, str) else ""
+
+def _parse_notes(raw):
+    """兼容模型把注释返回成 dict、字符串、甚至 “词：释义” 形式。"""
+    out = []
+    if not isinstance(raw, list):
+        return out
+    for n in raw:
+        if isinstance(n, dict):
+            term = _s(n.get("term")) or _s(n.get("word")) or _s(n.get("name"))
+            explain = _s(n.get("explain")) or _s(n.get("explanation")) or _s(n.get("meaning")) or _s(n.get("desc"))
+            if term or explain:
+                out.append({"term": term, "explain": explain})
+        elif isinstance(n, str) and n.strip():
+            s = n.strip()
+            for sep in ("：", ":", "—", "-"):
+                if sep in s:
+                    a, b = s.split(sep, 1)
+                    out.append({"term": a.strip(), "explain": b.strip()})
+                    break
+            else:
+                out.append({"term": "", "explain": s})
+    return out
+
 def apply_enrichment(poem, e):
-    if e.get("translation"):  poem["translation"] = e["translation"].strip()
-    if e.get("appreciation"): poem["appreciation"] = e["appreciation"].strip()
-    if e.get("english"):      poem["english"] = e["english"].strip()
-    if isinstance(e.get("notes"), list):
-        poem["notes"] = [{"term": n.get("term", ""), "explain": n.get("explain", "")}
-                         for n in e["notes"] if n.get("term")]
+    label = MODEL.split("/")[-1]        # 如 z-ai/glm-5.2 → glm-5.2
+    if _s(e.get("translation")):  poem["translation"] = _s(e["translation"])
+    if _s(e.get("appreciation")): poem["appreciation"] = _s(e["appreciation"])
+    if _s(e.get("english")):      poem["english"] = _s(e["english"])
+    notes = _parse_notes(e.get("notes"))
+    if notes:
+        poem["notes"] = notes
     if isinstance(e.get("themes"), list):
-        poem["themes"] = [t for t in e["themes"] if isinstance(t, str)][:4]
+        poem["themes"] = [t.strip() for t in e["themes"] if isinstance(t, str) and t.strip()][:4]
     pl = e.get("place")
     if isinstance(pl, dict) and isinstance(pl.get("lat"), (int, float)) and isinstance(pl.get("lng"), (int, float)):
-        poem["place"] = {"name": pl.get("name", ""), "modern": pl.get("modern", ""),
+        poem["place"] = {"name": _s(pl.get("name")), "modern": _s(pl.get("modern")),
                          "lat": float(pl["lat"]), "lng": float(pl["lng"])}
-    if e.get("yearLabel"):
-        poem["yearLabel"] = e["yearLabel"].strip()
+    if _s(e.get("yearLabel")):
+        poem["yearLabel"] = _s(e["yearLabel"])
     poem["english"] = poem.get("english", "")
-    poem["englishBy"] = "GLM-4.7 译"
+    poem["englishBy"] = label + " 译"
     poem["enriched"] = True
-    poem["enrichedBy"] = "glm-4.7"
+    poem["enrichedBy"] = label
 
 def save(poems):
     json.dump(poems, open(CORPUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -184,11 +210,15 @@ def main():
                 fail += 1
                 print("  ✗ 《%s》%s — %s" % (p["title"], p["author"], e["__error__"]))
             else:
-                apply_enrichment(p, e)
-                done += 1
-                if done % 5 == 0 or done == len(todo):
-                    rate = done / max(1e-9, time.time() - t0)
-                    print("  ✓ %d/%d  《%s》%s  (%.1f 首/秒)" % (done, len(todo), p["title"], p["author"], rate))
+                try:
+                    apply_enrichment(p, e)   # 单条解析出错绝不能中断整批
+                    done += 1
+                    if done % 5 == 0 or done == len(todo):
+                        rate = done / max(1e-9, time.time() - t0)
+                        print("  ✓ %d/%d  《%s》%s  (%.1f 首/秒)" % (done, len(todo), p["title"], p["author"], rate))
+                except Exception as ex:
+                    fail += 1
+                    print("  ✗ 《%s》%s — 解析失败: %s" % (p["title"], p["author"], str(ex)[:120]))
             if (done + fail) % 20 == 0:
                 save(poems)
     save(poems)
