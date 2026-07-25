@@ -1,64 +1,97 @@
-/* shell.css — cross-site tab strip ("spaces"): the only thing connecting
-   the poetry site and the painting site. Loaded by both pages. */
+/* shell.css — two-layer cross-site tab strip, shared by both sites.
+   Row 1 (dark)  = which work:  诗渊 · 千里江山图 · …more paintings later
+   Row 2 (paper) = which view of the current painting: 展卷 · 叠卷
+   Row 2 is only present on painting pages. */
 
 .tabstrip {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 38px;
   z-index: 2000;
   display: flex;
-  align-items: stretch;
-  gap: 0;
-  padding: 0 8px;
-  background: linear-gradient(180deg, #262320, #1b1916);
-  border-bottom: 1px solid rgba(0,0,0,0.5);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+  flex-direction: column;
   transition: transform .35s ease, opacity .35s ease;
   -webkit-user-select: none; user-select: none;
 }
-
-.tabstrip-tab {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 18px;
-  margin-top: 5px;
-  font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
-  font-size: 14px;
-  letter-spacing: 2px;
-  color: #b7ab97;
-  text-decoration: none;
-  border-radius: 8px 8px 0 0;
-  white-space: nowrap;
-  transition: background .18s, color .18s;
-}
-.tabstrip-tab::before {
-  content: "";
-  width: 8px; height: 8px; border-radius: 50%;
-  background: currentColor; opacity: .55;
-}
-.tabstrip-tab:hover { color: #efe7d5; background: rgba(255,255,255,0.05); }
-.tabstrip-tab.active {
-  color: #1b1916;
-  background: var(--paper, #f4efe4);
-}
-.tabstrip-tab.active::before { background: var(--cinnabar, #a8322d); opacity: 1; }
-
-/* Poetry page: strip is always-on chrome; push the app down under it. */
-body:not(.scroll-page) { padding-top: 38px; }
-body:not(.scroll-page) .site-header { top: 38px; }
-
-/* Painting page: strip overlays the full-bleed scroll and auto-hides. */
-.scroll-page .tabstrip {
-  background: linear-gradient(180deg, rgba(20,18,16,0.82), rgba(20,18,16,0.0));
-  border-bottom: none;
-  box-shadow: none;
-  backdrop-filter: blur(2px);
-}
-.scroll-page .tabstrip-tab { color: #d9cfba; }
-.scroll-page .tabstrip-tab.active { color: #1b1916; background: rgba(244,239,228,0.92); }
 .tabstrip.tucked { transform: translateY(-100%); opacity: 0; }
 
+.tabrow {
+  display: flex;
+  align-items: stretch;
+  padding: 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabrow::-webkit-scrollbar { display: none; }
+
+/* ---- row 1: works ---- */
+.tabrow-works {
+  height: 36px;
+  background: linear-gradient(180deg, #262320, #1b1916);
+  border-bottom: 1px solid rgba(0,0,0,0.5);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+}
+.tabrow-works .tabstrip-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 18px; margin-top: 5px;
+  font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
+  font-size: 14px; letter-spacing: 2px;
+  color: #b7ab97; text-decoration: none;
+  border-radius: 8px 8px 0 0; white-space: nowrap;
+  transition: background .18s, color .18s;
+}
+.tabrow-works .tabstrip-tab::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor; opacity: .55;
+}
+.tabrow-works .tabstrip-tab:hover { color: #efe7d5; background: rgba(255,255,255,0.05); }
+.tabrow-works .tabstrip-tab.active { color: #1b1916; background: var(--paper, #f4efe4); }
+.tabrow-works .tabstrip-tab.active::before { background: var(--cinnabar, #a8322d); opacity: 1; }
+
+/* ---- row 2: views of the current painting ---- */
+.tabrow-views {
+  height: 30px;
+  background: linear-gradient(180deg, #f4efe4, #e7ddc7);
+  border-bottom: 1px solid #cdbfa0;
+}
+.tabrow-views .tabstrip-tab {
+  display: flex; align-items: center;
+  padding: 0 15px;
+  font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
+  font-size: 13px; letter-spacing: 3px;
+  color: #6b6152; text-decoration: none; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color .18s, border-color .18s;
+}
+.tabrow-views .tabstrip-tab:hover { color: var(--cinnabar, #a8322d); }
+.tabrow-views .tabstrip-tab.active {
+  color: var(--cinnabar, #a8322d);
+  border-bottom-color: var(--cinnabar, #a8322d);
+}
+/* small seal dot separating the work name from its views */
+.tabrow-views .views-label {
+  display: flex; align-items: center;
+  padding: 0 10px 0 4px; font-size: 11px; letter-spacing: 2px;
+  color: #9a8f7a; white-space: nowrap;
+}
+
+/* ---- page offsets ---- */
+/* poetry site: one row of chrome */
+body:not(.art-page):not(.art-immersive) { padding-top: 36px; }
+body:not(.art-page):not(.art-immersive) .site-header { top: 36px; }
+/* painting, paged view: two rows of chrome */
+body.art-page { padding-top: 66px; }
+/* painting, immersive view: strip floats over the artwork and auto-hides */
+body.art-immersive .tabrow-works {
+  background: linear-gradient(180deg, rgba(20,18,16,0.86), rgba(20,18,16,0.62));
+  border-bottom: none; box-shadow: none; backdrop-filter: blur(3px);
+}
+body.art-immersive .tabrow-views {
+  background: rgba(244,239,228,0.90);
+  backdrop-filter: blur(3px);
+}
+
 @media (max-width: 520px) {
-  .tabstrip-tab { padding: 0 13px; font-size: 13px; letter-spacing: 1px; }
+  .tabrow-works .tabstrip-tab { padding: 0 13px; font-size: 13px; letter-spacing: 1px; }
+  .tabrow-views .tabstrip-tab { padding: 0 11px; font-size: 12px; letter-spacing: 2px; }
+  .tabrow-views .views-label { display: none; }
 }
