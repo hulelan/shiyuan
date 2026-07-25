@@ -1,0 +1,64 @@
+/* shell.css — cross-site tab strip ("spaces"): the only thing connecting
+   the poetry site and the painting site. Loaded by both pages. */
+
+.tabstrip {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 38px;
+  z-index: 2000;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 8px;
+  background: linear-gradient(180deg, #262320, #1b1916);
+  border-bottom: 1px solid rgba(0,0,0,0.5);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+  transition: transform .35s ease, opacity .35s ease;
+  -webkit-user-select: none; user-select: none;
+}
+
+.tabstrip-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 18px;
+  margin-top: 5px;
+  font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: #b7ab97;
+  text-decoration: none;
+  border-radius: 8px 8px 0 0;
+  white-space: nowrap;
+  transition: background .18s, color .18s;
+}
+.tabstrip-tab::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor; opacity: .55;
+}
+.tabstrip-tab:hover { color: #efe7d5; background: rgba(255,255,255,0.05); }
+.tabstrip-tab.active {
+  color: #1b1916;
+  background: var(--paper, #f4efe4);
+}
+.tabstrip-tab.active::before { background: var(--cinnabar, #a8322d); opacity: 1; }
+
+/* Poetry page: strip is always-on chrome; push the app down under it. */
+body:not(.scroll-page) { padding-top: 38px; }
+body:not(.scroll-page) .site-header { top: 38px; }
+
+/* Painting page: strip overlays the full-bleed scroll and auto-hides. */
+.scroll-page .tabstrip {
+  background: linear-gradient(180deg, rgba(20,18,16,0.82), rgba(20,18,16,0.0));
+  border-bottom: none;
+  box-shadow: none;
+  backdrop-filter: blur(2px);
+}
+.scroll-page .tabstrip-tab { color: #d9cfba; }
+.scroll-page .tabstrip-tab.active { color: #1b1916; background: rgba(244,239,228,0.92); }
+.tabstrip.tucked { transform: translateY(-100%); opacity: 0; }
+
+@media (max-width: 520px) {
+  .tabstrip-tab { padding: 0 13px; font-size: 13px; letter-spacing: 1px; }
+}
