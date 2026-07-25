@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>千里江山图 · 叠卷全览</title>
+  <meta name="description" content="王希孟《千里江山图》全卷折为四段，自上而下、自右而左通览。">
+  <link rel="stylesheet" href="css/shell.css">
+  <style>
+    :root { --paper:#f4efe4; --cinnabar:#a8322d; --gold:#b08d57; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; min-height: 100%;
+      background:
+        radial-gradient(120% 80% at 50% -10%, #26221d, #16130f 70%);
+      color: #cabfa8;
+      font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 1360px; margin: 0 auto;
+      padding: 20px 18px 40px;
+      display: flex; flex-direction: column;
+      min-height: calc(100dvh - 38px);
+      justify-content: center;
+    }
+    .head { text-align: center; margin: 4px 0 16px; }
+    .head h1 {
+      margin: 0; font-size: 22px; letter-spacing: 6px; color: #e7ddc9;
+      font-weight: 600;
+    }
+    .head p { margin: 6px 0 0; font-size: 12px; letter-spacing: 3px; color: #9c8f76; }
+    .rows { display: flex; flex-direction: column; gap: 8px; }
+    .row {
+      position: relative;
+      border: 1px solid rgba(176,141,87,0.35);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.45);
+      background: #0e0c0a;
+      overflow: hidden;
+    }
+    .row img { width: 100%; height: auto; display: block; }
+    /* tiny segment marker, upper-right of each band */
+    .row .seg {
+      position: absolute; top: 6px; right: 9px;
+      font-size: 11px; letter-spacing: 2px; color: rgba(231,221,201,0.8);
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9); pointer-events: none;
+    }
+    .foot { text-align:center; margin-top: 16px; font-size: 12px; letter-spacing:2px; color:#8a7e68; }
+    .foot a { color:#c9a24a; text-decoration: none; }
+    .foot a:hover { text-decoration: underline; }
+    @media (max-width: 520px) {
+      .head h1 { font-size: 18px; letter-spacing: 4px; }
+      .row .seg { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- cross-site tab strip -->
+  <div class="tabstrip" id="tabstrip">
+    <a class="tabstrip-tab" href="index.html">诗渊</a>
+    <a class="tabstrip-tab" href="scroll.html">千里江山图</a>
+    <a class="tabstrip-tab active" href="grid.html">叠卷</a>
+  </div>
+
+  <div class="wrap">
+    <div class="head">
+      <h1>千里江山图 · 叠卷全览</h1>
+      <p>全卷折为四段　自上而下、自右而左　王希孟　北宋</p>
+    </div>
+    <div class="rows">
+      <div class="row"><span class="seg">一（起首·右端）</span><img src="assets/grid/row-0.jpg" alt="千里江山图 第一段（最右）"></div>
+      <div class="row"><span class="seg">二</span><img src="assets/grid/row-1.jpg" alt="千里江山图 第二段"></div>
+      <div class="row"><span class="seg">三</span><img src="assets/grid/row-2.jpg" alt="千里江山图 第三段"></div>
+      <div class="row"><span class="seg">四（卷末·左端）</span><img src="assets/grid/row-3.jpg" alt="千里江山图 第四段（最左）"></div>
+    </div>
+    <div class="foot">想逐寸细看？ 到 <a href="scroll.html">千里江山图 · 展卷</a> 自右向左慢展。</div>
+  </div>
+</body>
+</html>
