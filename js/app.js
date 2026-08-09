@@ -26,35 +26,9 @@
   var HAN = /[一-鿿]/;
 
   // ---------- 体裁自动归类 ----------
-  // 依句式（每句字数、句数）把每首作品归入诗体谱系；词/曲/文按 genre。
-  function classifyForm(p) {
-    if (p.genre === "词") return { group: "词", sub: "词", label: "词" };
-    if (p.genre === "曲") return { group: "曲", sub: "曲", label: "曲" };
-    if (p.genre === "文") return { group: "文", sub: "散文·语录", label: "文" };
-    if (p.genre === "赋") return { group: "赋", sub: "赋", label: "赋" };
-    var f = p.form || "";
-    if (f.indexOf("诗经") >= 0) return { group: "四言·诗经", sub: "诗经", label: "诗经" };
-    if (f.indexOf("楚辞") >= 0 || f.indexOf("骚") >= 0) return { group: "骚体·楚辞", sub: "楚辞", label: "楚辞" };
-    // 按标点切成句，仅数汉字
-    var clauses = p.text.split(/[，。！？、；：\n]/).map(function (s) {
-      return (s.match(/[一-鿿]/g) || []).length;
-    }).filter(function (n) { return n > 0; });
-    var n = clauses.length;
-    var L = clauses[0] || 0;
-    var uniform = clauses.every(function (l) { return l === L; });
-    if (uniform && L === 5 && n === 4) return { group: "近体诗", sub: "五言绝句", label: "五绝" };
-    if (uniform && L === 7 && n === 4) return { group: "近体诗", sub: "七言绝句", label: "七绝" };
-    if (uniform && L === 5 && n === 8) return { group: "近体诗", sub: "五言律诗", label: "五律" };
-    if (uniform && L === 7 && n === 8) return { group: "近体诗", sub: "七言律诗", label: "七律" };
-    if (uniform && L === 5 && n > 8)  return { group: "古体诗", sub: "五言古诗", label: "五古" };
-    if (uniform && L === 7 && n > 8)  return { group: "古体诗", sub: "七言古诗", label: "七古" };
-    if (uniform && L === 4)           return { group: "古体诗", sub: "四言", label: "四言" };
-    if (uniform && L === 5)           return { group: "古体诗", sub: "五言古诗", label: "五古" };
-    if (uniform && L === 7)           return { group: "古体诗", sub: "七言古诗", label: "七古" };
-    return { group: "古体诗", sub: "杂言 / 乐府", label: "古体" };
-  }
-  // 体裁谱系（用于"体裁"视图的排序与分组）
-  var FORM_GROUPS = ["四言·诗经", "骚体·楚辞", "古体诗", "近体诗", "词", "曲", "文", "赋"];
+  // classifyForm / FORM_GROUPS 定义在 js/forms.js，admin.html 也用同一份。
+  var classifyForm = window.classifyForm;
+  var FORM_GROUPS = window.FORM_GROUPS;
   POEMS.forEach(function (p) { p._form = classifyForm(p); });
 
   function formTree() {
@@ -66,12 +40,22 @@
     return tree;
   }
 
-  // ---------- 作者统计 ----------
-  function topAuthors(n) {
-    var c = {};
-    POEMS.forEach(function (p) { if (p.author && p.author !== "佚名") c[p.author] = (c[p.author] || 0) + 1; });
-    return Object.keys(c).sort(function (a, b) { return c[b] - c[a]; })
-      .slice(0, n).map(function (a) { return { name: a, count: c[a] }; });
+  // ---------- 作者索引（懒构建）----------
+  // 每位作者归到其最早作品所属朝代，按存世篇数降序。
+  var _authorIdx = null;
+  function authorIndex() {
+    if (_authorIdx) return _authorIdx;
+    var m = {};
+    POEMS.forEach(function (p) {
+      if (!p.author || p.author === "佚名") return;
+      var a = m[p.author];
+      if (!a) a = m[p.author] = { name: p.author, count: 0, dynasty: p.dynasty, order: p.dynastyOrder };
+      a.count++;
+      if (p.dynastyOrder < a.order) { a.order = p.dynastyOrder; a.dynasty = p.dynasty; }
+    });
+    _authorIdx = Object.keys(m).map(function (k) { return m[k]; })
+      .sort(function (a, b) { return b.count - a.count || a.order - b.order; });
+    return _authorIdx;
   }
 
   // ---------- 字词索引（懒构建）----------
@@ -140,7 +124,8 @@
 
   var PAGE = 120;
   // 分页渲染：先出 PAGE 张，多余的用"显示更多"按需追加，避免一次塞入数千 DOM
-  function renderPaged(grid, list, countEl) {
+  function renderPagedWith(grid, list, countEl, build, unit) {
+    unit = unit || "篇";
     grid.innerHTML = "";
     // 清掉上一次渲染残留的"显示更多"按钮
     var stale = grid.parentNode.querySelectorAll(".more-btn");
@@ -149,17 +134,20 @@
     var moreBtn = null;
     function step() {
       var end = Math.min(shown + PAGE, list.length);
-      for (var i = shown; i < end; i++) grid.appendChild(poemCard(list[i]));
+      for (var i = shown; i < end; i++) grid.appendChild(build(list[i]));
       shown = end;
       if (moreBtn) moreBtn.remove();
       if (shown < list.length) {
-        moreBtn = el("button", "more-btn", "显示更多（还有 " + (list.length - shown) + " 篇）");
+        moreBtn = el("button", "more-btn", "显示更多（还有 " + (list.length - shown) + " " + unit + "）");
         moreBtn.addEventListener("click", step);
         grid.parentNode.insertBefore(moreBtn, grid.nextSibling);
       }
     }
     step();
-    if (countEl) countEl.textContent = "共 " + list.length + " 篇";
+    if (countEl) countEl.textContent = "共 " + list.length + " " + unit;
+  }
+  function renderPaged(grid, list, countEl) {
+    renderPagedWith(grid, list, countEl, poemCard, "篇");
   }
 
   function renderLibrary() {
@@ -278,6 +266,40 @@
     state.author = name; switchView("author");
   }
 
+  // ---------- 作者索引视图 ----------
+  function authorCell(a) {
+    var c = el("div", "au-cell");
+    c.innerHTML = '<span class="au-seal">' + a.name.slice(0, 1) + '</span>' +
+      '<span class="au-name">' + a.name + '</span>' +
+      '<span class="au-dyn">' + a.dynasty + '</span>' +
+      '<span class="au-n">' + a.count + '</span>';
+    c.addEventListener("click", function () { goAuthor(a.name); });
+    return c;
+  }
+  function renderAuthors() {
+    var all = authorIndex();
+    var box = $("#authorFilters");
+    box.innerHTML = "";
+    var allBtn = el("button", "chip" + (state.authorDyn ? "" : " active"), "全部");
+    allBtn.addEventListener("click", function () { state.authorDyn = null; renderAuthors(); });
+    box.appendChild(allBtn);
+    DYNASTIES.forEach(function (d) {
+      if (!all.some(function (a) { return a.dynasty === d.key; })) return;
+      var b = el("button", "chip" + (state.authorDyn === d.key ? " active" : ""), d.key);
+      b.addEventListener("click", function () {
+        state.authorDyn = state.authorDyn === d.key ? null : d.key; renderAuthors();
+      });
+      box.appendChild(b);
+    });
+
+    var q = (state.authorQuery || state.query || "").trim();
+    var list = all.filter(function (a) {
+      return (!state.authorDyn || a.dynasty === state.authorDyn) &&
+             (!q || a.name.indexOf(q) !== -1);
+    });
+    renderPagedWith($("#authorIndex"), list, $("#authorsCount"), authorCell, "位");
+  }
+
   // ---------- 作者专页 ----------
   function renderAuthor() {
     var name = state.author;
@@ -311,7 +333,7 @@
       : "";
 
     host.innerHTML =
-      '<button class="back-link" id="authorBack">‹ 返回</button>' +
+      '<button class="back-link" id="authorBack">‹ 作者索引</button>' +
       '<div class="author-head">' +
         '<div class="author-seal">' + name.slice(0, 1) + '</div>' +
         '<h1 class="author-name">' + name + '</h1>' +
@@ -323,7 +345,7 @@
       '<p class="count" id="authorCount"></p>';
 
     renderPaged($("#authorGrid"), works, $("#authorCount"));
-    $("#authorBack").addEventListener("click", function () { history.length > 1 ? window.history.back() : switchView("home"); });
+    $("#authorBack").addEventListener("click", function () { switchView("authors"); });
     host.querySelectorAll("[data-theme]").forEach(function (b) {
       b.addEventListener("click", function () { goTheme(b.getAttribute("data-theme")); });
     });
@@ -332,109 +354,42 @@
     });
   }
 
-  // ---------- 首页 ----------
+  // ---------- 首页：一日一篇 ----------
+  // 只从精编集取，确保首页那一首六层俱全。
+  function homePool() {
+    return (window.POEMS && window.POEMS.length) ? window.POEMS : POEMS;
+  }
   function poemOfDay() {
-    var pool = (window.POEMS && window.POEMS.length) ? window.POEMS : POEMS;
+    var pool = homePool();
     var day = Math.floor((new Date()).getTime() / 86400000);
-    return pool[day % pool.length];
+    return pool[(day + (state.homeOffset || 0)) % pool.length];
   }
   function renderHome() {
     var host = $("#view-home");
-    var nAuthors = new Set(POEMS.filter(function (p) { return p.author && p.author !== "佚名"; })
-      .map(function (p) { return p.author; })).size;
-    var genres = {}; POEMS.forEach(function (p) { genres[p.genre] = (genres[p.genre] || 0) + 1; });
-    var dyns = DYNASTIES.filter(function (d) { return POEMS.some(function (p) { return p.dynasty === d.key; }); });
-    var dynCount = {}; POEMS.forEach(function (p) { dynCount[p.dynasty] = (dynCount[p.dynasty] || 0) + 1; });
-    var pod = poemOfDay();
-    var podLines = pod.text.split("\n");
-
-    var tree = formTree();
-    var formChips = "";
-    FORM_GROUPS.forEach(function (g) {
-      if (!tree[g]) return;
-      Object.keys(tree[g]).sort(function (a, b) { return tree[g][b] - tree[g][a]; }).forEach(function (s) {
-        formChips += '<button class="mini-chip" data-form="' + s + '">' + s +
-          '<i>' + tree[g][s] + '</i></button>';
-      });
-    });
-
-    var themes = allThemes().slice(0, 14);
-    var themeChips = themes.length ? themes.map(function (t) {
-      return '<button class="mini-chip" data-theme="' + t.name + '">' + t.name + '<i>' + t.count + '</i></button>';
-    }).join("") : '<span class="dim">主题将随内容生成逐步丰富…</span>';
-
-    var ci = charIndex();
-    var topChars = Object.keys(ci.poemsWith)
-      .sort(function (a, b) { return ci.poemsWith[b].length - ci.poemsWith[a].length; }).slice(0, 30);
-    var charChips = topChars.map(function (c) {
-      return '<button class="ch" data-char="' + c + '">' + c + '</button>';
-    }).join("");
-
-    var authors = topAuthors(16);
-    var authorChips = authors.map(function (a) {
-      return '<button class="mini-chip" data-author="' + a.name + '">' + a.name + '<i>' + a.count + '</i></button>';
-    }).join("");
-
-    var featured = (window.POEMS || []).slice(0, 8);
+    var p = poemOfDay();
+    var lines = p.text.split("\n");
+    // 散文/长句不居中排，改左对齐正常字距
+    var isProse = p.genre === "文" || lines.some(function (l) { return l.length > 22; });
 
     host.innerHTML =
-      '<div class="hero">' +
-        '<div class="hero-seal">詩淵</div>' +
-        '<div class="hero-verse" id="heroVerse">' +
-          podLines.map(function (l) { return '<span>' + l + '</span>'; }).join("") +
+      '<div class="daily">' +
+        '<div class="daily-seal">詩淵</div>' +
+        '<div class="daily-text' + (isProse ? " prose" : "") + '" id="dailyText">' +
+          lines.map(function (l) { return '<p>' + l + '</p>'; }).join("") +
         '</div>' +
-        '<div class="hero-attr">——' + pod.dynasty + '·' + pod.author + '《' + pod.title + '》</div>' +
-        '<div class="hero-tag">古诗古文的溯源之地 · 原文 · 拼音 · 译文 · 注释 · 赏析 · 英译</div>' +
-      '</div>' +
+        '<div class="daily-attr">' + p.dynasty + '　' + p.author + '　《' + p.title + '》</div>' +
+        '<div class="daily-acts">' +
+          '<button class="quiet" id="dailyOpen">释　文</button>' +
+          '<span class="daily-sep">·</span>' +
+          '<button class="quiet" id="dailyNext">换一篇</button>' +
+        '</div>' +
+      '</div>';
 
-      '<div class="stat-ribbon">' +
-        '<div><b>' + POEMS.length + '</b><span>篇 / 条</span></div>' +
-        '<div><b>' + nAuthors + '</b><span>位作者</span></div>' +
-        '<div><b>' + dyns.length + '</b><span>个朝代</span></div>' +
-        '<div><b>' + Object.keys(genres).length + '</b><span>类体裁</span></div>' +
-        '<div class="genre-mini">' + Object.keys(genres).sort(function (a, b) { return genres[b] - genres[a]; })
-          .map(function (g) { return g + ' ' + genres[g]; }).join(' · ') + '</div>' +
-      '</div>' +
-
-      '<section class="home-sec"><h2>循 朝 代</h2><div class="dyn-strip">' +
-        dyns.map(function (d) {
-          return '<button class="dyn-block" data-dyn="' + d.key + '">' +
-            '<b>' + d.key + '</b><em>' + d.span + '</em><i>' + (dynCount[d.key] || 0) + ' 篇</i></button>';
-        }).join("") +
-      '</div></section>' +
-
-      '<section class="home-sec"><h2>循 体 裁</h2><div class="chip-flow">' + formChips + '</div></section>' +
-
-      '<section class="home-sec"><h2>循 主 题</h2><div class="chip-flow">' + themeChips + '</div></section>' +
-
-      '<section class="home-sec"><h2>字 里 行 间</h2>' +
-        '<p class="sec-sub">循一字，读万篇。点击进入"字词"视图。</p>' +
-        '<div class="char-row">' + charChips + '</div></section>' +
-
-      (authorChips ? '<section class="home-sec"><h2>名 家</h2><div class="chip-flow">' + authorChips + '</div></section>' : "") +
-
-      '<section class="home-sec"><h2>名 篇 精 选</h2><div class="grid" id="homeFeatured"></div></section>';
-
-    // 名篇卡片
-    var fg = $("#homeFeatured");
-    featured.forEach(function (p) { fg.appendChild(poemCard(p)); });
-
-    // 事件绑定
-    host.querySelector(".hero-verse").addEventListener("click", function () { openDetail(pod.id); });
-    host.querySelectorAll("[data-dyn]").forEach(function (b) {
-      b.addEventListener("click", function () { goDynasty(b.getAttribute("data-dyn")); });
-    });
-    host.querySelectorAll("[data-form]").forEach(function (b) {
-      b.addEventListener("click", function () { goForm(b.getAttribute("data-form")); });
-    });
-    host.querySelectorAll("[data-theme]").forEach(function (b) {
-      b.addEventListener("click", function () { goTheme(b.getAttribute("data-theme")); });
-    });
-    host.querySelectorAll("[data-char]").forEach(function (b) {
-      b.addEventListener("click", function () { goWord(b.getAttribute("data-char")); });
-    });
-    host.querySelectorAll("[data-author]").forEach(function (b) {
-      b.addEventListener("click", function () { goAuthor(b.getAttribute("data-author")); });
+    $("#dailyText").addEventListener("click", function () { openDetail(p.id); });
+    $("#dailyOpen").addEventListener("click", function () { openDetail(p.id); });
+    $("#dailyNext").addEventListener("click", function () {
+      state.homeOffset = (state.homeOffset || 0) + 1;
+      renderHome();
     });
   }
 
@@ -475,7 +430,7 @@
     var max = ci.poemsWith[chars[0]].length, min = ci.poemsWith[chars[chars.length - 1]].length;
     chars.forEach(function (c) {
       var n = ci.poemsWith[c].length;
-      var sz = 15 + Math.round(26 * (n - min) / Math.max(1, max - min));
+      var sz = 13 + Math.round(20 * (n - min) / Math.max(1, max - min));
       var b = el("button", "cloud-char", c);
       b.style.fontSize = sz + "px";
       b.title = n + " 篇含此字";
@@ -610,6 +565,7 @@
     else if (v === "word") renderWord();
     else if (v === "timeline") renderTimeline();
     else if (v === "map") renderMap();
+    else if (v === "authors") renderAuthors();
     else if (v === "author") renderAuthor();
   }
 
@@ -618,6 +574,7 @@
     else if (state.view === "type") renderType();
     else if (state.view === "theme") renderTheme();
     else if (state.view === "timeline") renderTimeline();
+    else if (state.view === "authors") renderAuthors();
     else if (state.view === "word") showWord(state.query || state.wordTerm);
   }
 
@@ -635,14 +592,14 @@
     });
     var wi = $("#wordInput");
     if (wi) wi.addEventListener("input", function () { showWord(this.value); });
+    var ai = $("#authorInput");
+    if (ai) ai.addEventListener("input", function () { state.authorQuery = this.value; renderAuthors(); });
     $("#overlay").addEventListener("click", function (e) {
       if (e.target === this) closeDetail();
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") closeDetail();
     });
-    $("#footStat").textContent = "现收录 " + POEMS.length + " 篇 · 覆盖 " +
-      (new Set(POEMS.map(function (p) { return p.dynasty; }))).size + " 个朝代";
     switchView("home");
   }
 

@@ -27,6 +27,7 @@
     <nav class="tabs" id="viewTabs">
       <button data-view="home" class="active">首页</button>
       <button data-view="library">诗文库</button>
+      <button data-view="authors">作者</button>
       <button data-view="type">体裁</button>
       <button data-view="theme">主题</button>
       <button data-view="word">字词</button>
@@ -47,6 +48,17 @@
       <div class="filters" id="filters"></div>
       <div class="grid" id="poemGrid"></div>
       <p class="count" id="libCount"></p>
+    </section>
+
+    <!-- 作者索引 -->
+    <section class="view hidden" id="view-authors">
+      <p class="view-intro">一人一生的笔墨，聚在一处看，才见得出脾气。按朝代筛选，或直接搜名字。</p>
+      <div class="author-search">
+        <input type="search" id="authorInput" placeholder="搜索作者，如 李白、苏轼…" autocomplete="off">
+      </div>
+      <div class="filters" id="authorFilters"></div>
+      <div class="author-index" id="authorIndex"></div>
+      <p class="count" id="authorsCount"></p>
     </section>
 
     <!-- 体裁 -->
@@ -97,13 +109,13 @@
   </div>
 
   <footer class="site-footer">
-    <span id="footStat"></span> ·
-    种子数据集，持续扩充中 · 文本仅供学习研究之用
+    文本仅供学习研究之用
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data/poems.js"></script>
   <script src="data/corpus.js"></script>
+  <script src="js/forms.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

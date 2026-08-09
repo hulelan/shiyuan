@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>诗渊 · 库存</title>
+  <style>
+    :root {
+      --ink: #1a1a1a; --ink-soft: #57534b; --paper: #f4efe4;
+      --cinnabar: #a8322d; --jade: #4a6b5a; --gold: #b08d57; --line: #d8ccb4;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --serif: "Songti SC", "Noto Serif SC", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 28px 22px 60px; background: var(--paper); color: var(--ink);
+      font-family: var(--serif); -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    h1 { font-size: 17px; letter-spacing: 4px; color: var(--cinnabar); margin: 0 0 2px; }
+    .sub { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-bottom: 22px; }
+    .sub a { color: var(--jade); }
+    h2 {
+      font-size: 12px; letter-spacing: 3px; color: var(--cinnabar); font-weight: 700;
+      margin: 28px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
+    }
+    .kpis { display: flex; flex-wrap: wrap; gap: 26px; padding: 4px 0 2px; }
+    .kpi b { display: block; font-family: var(--mono); font-size: 22px; color: var(--cinnabar); font-weight: 500; }
+    .kpi span { font-size: 10.5px; letter-spacing: 2px; color: var(--ink-soft); }
+    table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+    th, td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid rgba(216,204,180,.5); }
+    th { font-size: 10.5px; letter-spacing: 2px; color: var(--gold); font-weight: 400; }
+    td.n { font-family: var(--mono); text-align: right; width: 74px; color: var(--ink-soft); }
+    td.pct { font-family: var(--mono); text-align: right; width: 62px; color: var(--jade); font-size: 11.5px; }
+    /* 覆盖率条：条宽即百分比，一眼看出哪层欠账 */
+    .bar { position: relative; height: 3px; background: rgba(176,141,87,.22); border-radius: 2px; margin-top: 3px; }
+    .bar i { position: absolute; inset: 0 auto 0 0; background: var(--jade); border-radius: 2px; }
+    .bar.warn i { background: var(--cinnabar); }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 40px; }
+    .gap { font-size: 12px; color: var(--ink-soft); line-height: 1.9; }
+    .gap b { color: var(--cinnabar); font-family: var(--mono); font-weight: 500; }
+    code { font-family: var(--mono); font-size: 11.5px; color: var(--jade); }
+    .loading { color: var(--gold); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>库 存</h1>
+    <div class="sub">内部页面，未挂在导航上 · <a href="index.html">← 回站点</a></div>
+    <div id="out" class="loading">读取语料中…</div>
+  </div>
+
+  <script src="data/poems.js"></script>
+  <script src="data/corpus.js"></script>
+  <script src="js/forms.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var POEMS = (window.POEMS || []).concat(window.POEMS_IMPORTED || []);
+    var DYNASTIES = window.DYNASTIES || [];
+    var N = POEMS.length;
+    POEMS.forEach(function (p) { p._form = window.classifyForm(p); });
+
+    function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+    function pct(n) { return N ? Math.round(n / N * 100) : 0; }
+
+    // 计数 → [{name,count}]，按 count 降序
+    function tally(fn) {
+      var m = {};
+      POEMS.forEach(function (p) {
+        var k = fn(p);
+        if (k == null || k === "") return;
+        m[k] = (m[k] || 0) + 1;
+      });
+      return Object.keys(m).map(function (k) { return { name: k, count: m[k] }; })
+        .sort(function (a, b) { return b.count - a.count; });
+    }
+
+    function table(head, rows) {
+      return '<table><tr><th>' + head + '</th><th class="n" style="text-align:right">篇</th><th class="pct" style="text-align:right">%</th></tr>' +
+        rows.map(function (r) {
+          return '<tr><td>' + esc(r.name) + '</td><td class="n">' + r.count +
+            '</td><td class="pct">' + pct(r.count) + '</td></tr>';
+        }).join("") + '</table>';
+    }
+
+    // ---- 各编辑层的覆盖率 ----
+    var LAYERS = [
+      { key: "译文",     has: function (p) { return !!p.translation; } },
+      { key: "注释",     has: function (p) { return !!(p.notes && p.notes.length); } },
+      { key: "赏析",     has: function (p) { return !!p.appreciation; } },
+      { key: "英译",     has: function (p) { return !!p.english; } },
+      { key: "拼音",     has: function (p) { return !!p.pinyin; } },
+      { key: "主题",     has: function (p) { return !!(p.themes && p.themes.length); } },
+      { key: "地点坐标", has: function (p) { return !!(p.place && typeof p.place.lat === "number"); } },
+      { key: "纪年",     has: function (p) { return typeof p.year === "number" && !isNaN(p.year); } }
+    ];
+    var layerRows = LAYERS.map(function (L) {
+      var n = POEMS.filter(L.has).length;
+      var p = pct(n);
+      return '<tr><td>' + L.key + '<div class="bar' + (p < 60 ? " warn" : "") + '"><i style="width:' + p + '%"></i></div></td>' +
+        '<td class="n">' + n + '</td><td class="pct">' + p + '</td></tr>';
+    }).join("");
+
+    var curated = (window.POEMS || []).length;
+    var imported = (window.POEMS_IMPORTED || []).length;
+    var authors = {};
+    POEMS.forEach(function (p) { if (p.author && p.author !== "佚名") authors[p.author] = 1; });
+    var nAuthors = Object.keys(authors).length;
+    var anon = POEMS.filter(function (p) { return !p.author || p.author === "佚名"; }).length;
+    var enrichedBy = tally(function (p) { return p.enrichedBy; });
+    var dynOrder = {};
+    DYNASTIES.forEach(function (d, i) { dynOrder[d.key] = i; });
+
+    var dynRows = tally(function (p) { return p.dynasty; })
+      .sort(function (a, b) { return (dynOrder[a.name] == null ? 99 : dynOrder[a.name]) - (dynOrder[b.name] == null ? 99 : dynOrder[b.name]); });
+
+    document.getElementById("out").className = "";
+    document.getElementById("out").innerHTML =
+      '<div class="kpis">' +
+        '<div class="kpi"><b>' + N + '</b><span>总篇数</span></div>' +
+        '<div class="kpi"><b>' + curated + '</b><span>精编</span></div>' +
+        '<div class="kpi"><b>' + imported + '</b><span>导入</span></div>' +
+        '<div class="kpi"><b>' + nAuthors + '</b><span>署名作者</span></div>' +
+        '<div class="kpi"><b>' + anon + '</b><span>佚名篇</span></div>' +
+        '<div class="kpi"><b>' + dynRows.length + '</b><span>朝代</span></div>' +
+      '</div>' +
+
+      '<h2>编 辑 层 覆 盖 率</h2>' +
+      '<table><tr><th>层</th><th class="n" style="text-align:right">篇</th><th class="pct" style="text-align:right">%</th></tr>' +
+      layerRows + '</table>' +
+      (enrichedBy.length
+        ? '<p class="gap">生成来源：' + enrichedBy.map(function (e) {
+            return '<code>' + esc(e.name) + '</code> <b>' + e.count + '</b>';
+          }).join(" ｜ ") + '</p>'
+        : "") +
+
+      '<div class="cols">' +
+        '<div><h2>循 朝 代</h2>' + table("朝代", dynRows) + '</div>' +
+        '<div><h2>循 体 裁</h2>' + table("体裁", tally(function (p) { return p._form.sub; })) + '</div>' +
+      '</div>' +
+
+      '<div class="cols">' +
+        '<div><h2>循 主 题（前 25）</h2>' +
+          table("主题", (function () {
+            var m = {};
+            POEMS.forEach(function (p) { (p.themes || []).forEach(function (t) { m[t] = (m[t] || 0) + 1; }); });
+            return Object.keys(m).map(function (k) { return { name: k, count: m[k] }; })
+              .sort(function (a, b) { return b.count - a.count; }).slice(0, 25);
+          })()) + '</div>' +
+        '<div><h2>作 者 存 篇（前 25）</h2>' +
+          table("作者", tally(function (p) {
+            return (p.author && p.author !== "佚名") ? p.author : null;
+          }).slice(0, 25)) + '</div>' +
+      '</div>';
+  })();
+  </script>
+</body>
+</html>
