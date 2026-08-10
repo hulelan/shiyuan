@@ -2,13 +2,18 @@
 # -*- coding: utf-8 -*-
 """
 build_corpus.py — 从 chinese-poetry 开源库拉取原文，转简体、生成拼音，
-产出本项目 schema 的 data/corpus.js（window.POEMS_IMPORTED）。
+合并进 data/source/*.jsonl。
 
-只处理【原文】层（公有领域）。译文/注释/赏析/英译/主题/地点 由后续
-enrich_glm.py 用 GLM 生成。用法：
+只写【原文】层（公有领域），只增不改：id 相同的诗直接跳过。
+data/enrich/ 除了给新诗补一条空记录之外，一个字都不动 ——
+所以本脚本可以随时重跑、随时加新诗，不会碰掉已经花钱生成的译注赏析。
+
+译文/注释/赏析/英译/主题/地点 由后续 enrich_glm.py 生成。用法：
     ../.venv/bin/python build_corpus.py
 """
 import json, os, sys, urllib.request, urllib.parse, hashlib, re
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import corpus_lib as CL
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -88,13 +93,13 @@ def pinyin_line(line):
     toks = lazy_pinyin(line, style=Style.TONE, errors=lambda x: list(x))
     return " ".join(t for t in toks if t.strip())
 
-def slugify(dynasty, idx):
-    return "imp-%s-%d" % (hashlib.md5(dynasty.encode()).hexdigest()[:4], idx)
+# id 由 内容 派生，不再用位置编号。
+# 旧方案 imp-<朝代hash>-<第几首> 是个陷阱：插入或调整任何一首，
+# 后面所有诗的 id 都会平移，编辑层就会接到错误的诗上去。见 corpus_lib.stable_id。
 
 def main():
     out = []
     seen = set()
-    gid = 0
     for src in SOURCES:
         print("处理", src["path"])
         try:
@@ -128,7 +133,7 @@ def main():
             if src["genre"] in ("词", "曲") and title:
                 form = ("词·" if src["genre"] == "词" else "曲·") + title.split("·")[0].split("・")[0]
             out.append({
-                "id": slugify(src["dynasty"], gid),
+                "id": CL.stable_id(author, title, text),
                 "title": title,
                 "author": author,
                 "dynasty": src["dynasty"],
@@ -146,25 +151,46 @@ def main():
                 "appreciation": "",
                 "english": "",
                 "source": "chinese-poetry",
-                "enriched": False,
+                "curated": False,
             })
-            gid += 1; cnt += 1
+            cnt += 1
         print("  收录", cnt)
 
-    # 写 JSON（供 enrich 脚本读写）与 JS（供网页加载）
-    json.dump(out, open(os.path.join(ROOT, "data", "corpus.json"), "w", encoding="utf-8"),
-              ensure_ascii=False, indent=1)
-    with open(os.path.join(ROOT, "data", "corpus.js"), "w", encoding="utf-8") as f:
-        f.write("/* 自动生成 — 由 tools/build_corpus.py 从 chinese-poetry 导入。原文为公有领域。\n")
-        f.write("   译文/注释/赏析/英译/主题/地点 待 tools/enrich_glm.py 用 GLM 生成。 */\n")
-        f.write("window.POEMS_IMPORTED = ")
-        json.dump(out, f, ensure_ascii=False, indent=1)
-        f.write(";\n")
-    print("\n共导出 %d 篇 →" % len(out), "data/corpus.json, data/corpus.js")
-    by = {}
-    for p in out:
-        by[p["dynasty"]] = by.get(p["dynasty"], 0) + 1
-    print("朝代分布:", "  ".join("%s %d" % (k, v) for k, v in sorted(by.items(), key=lambda kv: -kv[1])))
+    # ---- 合并进原文层。绝不触碰 data/enrich/ ----
+    existing = CL.load_source()
+    fresh, dupe = [], 0
+    seen_new = set()
+    for r in out:
+        if r["id"] in existing or r["id"] in seen_new:
+            dupe += 1
+            continue
+        seen_new.add(r["id"])
+        fresh.append(r)
+
+    merged = list(existing.values()) + fresh
+    ns = CL.save_layer(CL.SOURCE_DIR, merged, CL.SOURCE_FIELDS)
+
+    # 新诗需要一条对应的空编辑层记录，好让两层的 id 集合始终对齐。
+    # 已存在的记录一个字都不动 —— 这是本脚本不会毁掉 enrich 的关键。
+    enrich = CL.load_enrich()
+    added_e = 0
+    for r in fresh:
+        if r["id"] not in enrich:
+            enrich[r["id"]] = {"id": r["id"], "themes": [], "place": None, "translation": "",
+                               "notes": [], "appreciation": "", "english": "",
+                               "englishBy": "", "enrichedBy": ""}
+            added_e += 1
+    by_dyn = {r["id"]: r["dynasty"] for r in merged}
+    for e in enrich.values():
+        e["_slug"] = CL.SLUG.get(by_dyn.get(e["id"]))
+    CL.save_layer(CL.ENRICH_DIR, [e for e in enrich.values() if e.get("_slug")], CL.ENRICH_FIELDS)
+
+    print("\n本次抓取 %d 篇：新增 %d，已有跳过 %d" % (len(out), len(fresh), dupe))
+    print("原文层现共 %d 篇：" % len(merged))
+    for slug in sorted(ns, key=lambda x: [d[2] for d in CL.DYNASTIES].index(x)):
+        print("   %-11s %6d" % (slug, ns[slug]))
+    print("编辑层新建空记录 %d 条；已有的 %d 条一字未动。" % (added_e, len(enrich) - added_e))
+    print("\n接着跑：tools/enrich_glm.py  再跑  tools/build_site_data.py")
 
 if __name__ == "__main__":
     main()

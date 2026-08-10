@@ -190,42 +190,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .theme-cloud { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 22px; }
 .theme-cloud .chip.big { font-size: 13.5px; padding: 5px 14px; }
 
-/* ---------- Timeline ---------- */
-.timeline { position: relative; padding: 10px 0 40px; }
-.timeline::before {
-  content: ""; position: absolute; left: 120px; top: 0; bottom: 0; width: 2px;
-  background: linear-gradient(var(--gold), var(--cinnabar), var(--jade));
-}
-.era-band { position: relative; margin: 0 0 6px; }
-.era-label {
-  position: absolute; left: 0; width: 104px; text-align: right;
-  font-size: 13px; letter-spacing: 2px; color: var(--cinnabar); font-weight: 700;
-  top: 4px;
-}
-.era-span { display: block; font-size: 10px; color: var(--gold); letter-spacing: 1px; font-weight: 400; margin-top: 2px; }
-.tl-item {
-  position: relative; margin-left: 150px; padding: 8px 14px; margin-bottom: 7px;
-  background: linear-gradient(160deg, #fbf7ec, #f1e9d7);
-  border: 1px solid var(--line); border-radius: 8px;
-  cursor: pointer; transition: transform .16s, box-shadow .16s;
-}
-.tl-item:hover { transform: translateX(4px); box-shadow: 0 6px 16px var(--shadow); }
-.tl-item::before {
-  content: ""; position: absolute; left: -36px; top: 50%; transform: translateY(-50%);
-  width: 11px; height: 11px; border-radius: 50%; background: var(--cinnabar);
-  border: 2px solid var(--paper); box-shadow: 0 0 0 2px var(--cinnabar-soft);
-}
-.tl-item .tl-year { font-size: 10.5px; color: var(--gold); letter-spacing: 1px; }
-.tl-item .tl-title { font-size: 15px; letter-spacing: 1.5px; color: var(--ink); margin: 1px 0; }
-.tl-item .tl-title small { font-size: 11.5px; color: var(--ink-soft); letter-spacing: 1px; font-weight: 400; }
-.tl-item .tl-form { font-size: 11px; color: var(--jade); letter-spacing: 1px; }
-
 /* ---------- Map ---------- */
-#mapCanvas {
-  height: 560px; border-radius: 10px; overflow: hidden;
-  border: 1px solid var(--line); box-shadow: inset 0 0 30px rgba(60,45,20,0.08);
-  background: #dfe6e2;
-}
 .map-note { text-align: center; color: var(--ink-soft); font-size: 13px; margin-top: 12px; }
 .leaflet-popup-content { font-family: var(--serif); }
 .map-popup h4 { margin: 0 0 3px; color: var(--cinnabar); font-size: 17px; letter-spacing: 1px; }
@@ -491,3 +456,78 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 }
 .ap-works-h::after { content: ""; display: block; width: 26px; height: 2px; background: var(--gold); margin: 8px auto 14px; }
 .back-link { font-size: 12px; }
+
+/* ============ 载入 / 空态 ============ */
+.loading, .empty, .loadfail {
+  text-align: center; color: var(--gold); font-size: 12.5px;
+  letter-spacing: 2px; padding: 40px 20px; line-height: 2;
+}
+.loading { animation: breathe 1.6s ease-in-out infinite; }
+@keyframes breathe { 0%,100% { opacity: .45 } 50% { opacity: .9 } }
+.empty { color: var(--ink-soft); }
+.loadfail { color: var(--cinnabar); }
+.loadfail small { color: var(--ink-soft); letter-spacing: .5px; }
+.caveat { color: var(--gold); font-size: 11px; letter-spacing: .5px; }
+
+/* ============ 体裁 / 主题：分面导航 ============ */
+.facet-nav { margin-bottom: 18px; }
+.facet-group {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin-bottom: 7px; padding-bottom: 7px; border-bottom: 1px dashed var(--line);
+}
+.facet-group:last-child { border-bottom: none; }
+.facet-group-label {
+  font-size: 12.5px; letter-spacing: 2px; color: var(--cinnabar); font-weight: 700;
+  min-width: 80px; text-align: right; padding-right: 8px;
+}
+.facet-group .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
+.facet-group .chip.active i { color: rgba(255,255,255,0.75); }
+.filters .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
+.filters .chip.active i { color: rgba(255,255,255,0.75); }
+
+/* ============ 时间轴 ============ */
+.tl-bands { display: flex; flex-direction: column; gap: 8px; max-width: 780px; margin: 0 auto; }
+.tl-band {
+  border: 1px solid var(--line); border-radius: 7px; padding: 11px 14px 9px;
+  background: linear-gradient(160deg, #fbf7ec, #f1e9d7); cursor: pointer;
+  transition: border-color .16s, box-shadow .16s, transform .16s;
+}
+.tl-band:hover { border-color: var(--cinnabar-soft); box-shadow: 0 5px 14px var(--shadow); transform: translateX(3px); }
+.tl-band.vague { opacity: .62; }
+.tl-band-head { display: flex; align-items: baseline; gap: 10px; }
+.tl-band-head b { font-size: 15px; letter-spacing: 3px; color: var(--cinnabar); }
+.tl-band-head em { font-style: normal; font-size: 10.5px; color: var(--gold); letter-spacing: .5px; }
+.tl-band-head i { font-style: normal; margin-left: auto; font-size: 11px; color: var(--jade); }
+.tl-hist { display: flex; align-items: flex-end; gap: 2px; height: 50px; margin-top: 8px; }
+.tl-bar {
+  flex: 1; min-width: 2px; border: none; padding: 0; cursor: pointer;
+  background: var(--cinnabar); opacity: .5; border-radius: 1px 1px 0 0;
+  transition: opacity .14s;
+}
+.tl-bar:hover { opacity: 1; }
+.tl-flat { font-size: 11px; color: var(--gold); align-self: center; letter-spacing: 1px; }
+
+/* ============ 地图 ============ */
+#mapCanvas {
+  height: 560px; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--line); box-shadow: inset 0 0 30px rgba(60,45,20,0.08);
+  background: #dfe6e2;
+}
+.map-pin {
+  background: #a8322d; color: #fff; border-radius: 50%; width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 13px;
+  border: 2px solid #f4efe4; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+
+/* 详情浮层补充 */
+.pd-meta .seal.jade { background: var(--jade); }
+.pd-year { margin-top: 4px; }
+.en-by { font-style: normal; font-size: 12px; color: var(--gold); margin-top: 8px; }
+.facet-toggle {
+  display: block; margin: 10px auto 0; padding: 4px 14px;
+  font-family: var(--serif); font-size: 11.5px; letter-spacing: 2px;
+  color: var(--gold); background: none; border: 1px dashed var(--line);
+  border-radius: 14px; cursor: pointer; transition: all .15s;
+}
+.facet-toggle:hover { color: var(--cinnabar); border-color: var(--cinnabar-soft); }

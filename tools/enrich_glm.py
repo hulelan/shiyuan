@@ -1,29 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-enrich_glm.py — 用 GLM-4.7（经 OpenRouter）为 data/corpus.json 里的诗文
-生成 译文 / 注释 / 赏析 / 英译 / 主题 / 创作地点 / 年份。
+enrich_glm.py — 经 OpenRouter 调模型，为原文层的诗文生成
+译文 / 注释 / 赏析 / 英译 / 主题 / 创作地点 / 年份。
+
+默认模型 qwen/qwen3-vl-235b-a22b-instruct；--model 可换。
+已有的 2964 篇是早先用 glm-5.2 生成的，各条记录的 enrichedBy 字段
+保留着当时的模型名，网页据此标注来源，不会因为换模型而混淆。
+
+    读  data/source/*.jsonl   原文层（只读，绝不写）
+        data/enrich/*.jsonl   编辑层（已有的部分，用来跳过）
+    写  data/enrich/*.jsonl   只写这一层
 
 密钥读取顺序：环境变量 OPENROUTER_API_KEY  →  项目根目录 .env 文件里的
 OPENROUTER_API_KEY=xxx 一行。密钥不会出现在代码或输出里。
 
 用法：
     ../.venv/bin/python enrich_glm.py --limit 20      # 先试 20 首
+    ../.venv/bin/python enrich_glm.py --dry-run       # 只看待办清单，不调 API
     ../.venv/bin/python enrich_glm.py                 # 处理全部未生成的
-    ../.venv/bin/python enrich_glm.py --workers 4     # 并发（默认 3）
+    ../.venv/bin/python enrich_glm.py --workers 8     # 并发（默认 8）
 
-每处理 20 首自动落盘（corpus.json + corpus.js），可随时中断续跑。
-生成内容标注 enrichedBy=glm-4.7，网页会显示“AI 生成·待校订”。
+每 200 首落盘一次，且只重写当次改动过的朝代分片，可随时中断续跑。
+生成内容标注 enrichedBy=<模型名>，网页会显示"AI 生成·待校订"。
 """
 import json, os, sys, time, argparse, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-CORPUS = os.path.join(ROOT, "data", "corpus.json")
-CORPUS_JS = os.path.join(ROOT, "data", "corpus.js")
+sys.path.insert(0, HERE)
+import corpus_lib as CL
 
-MODEL = "z-ai/glm-4.7"
+MODEL = "qwen/qwen3-vl-235b-a22b-instruct"
 ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 REASONING = False   # 默认关闭思维链；--reasoning 开启（更深但慢 ~9x、贵 ~3x）
 
@@ -61,6 +70,7 @@ PROMPT_TMPL = """请为下面这首作品撰写赏读资料。
   "english": "流畅自然的英文翻译，可用 / 分隔诗行",
   "themes": ["主题词"],                                      // 2-4 个中文主题，如 思乡/送别/田园/爱情/咏物/怀古/边塞/哲理
   "place": {{"name":"创作地点古称","modern":"今地名","lat":纬度数字,"lng":经度数字}},  // 有据可考则填，拿不准填 null
+  "year": 公元年份数字,                                       // 创作年份，公元前为负数；只能估到几十年也请给中值，实在无据填 null
   "yearLabel": "尽量具体的创作年份或时期，如“盛唐 约750年”"
 }}
 若某字段确实无法判断，宁可从简，但 translation/appreciation/english 必须给出。"""
@@ -121,35 +131,39 @@ def _parse_notes(raw):
                 out.append({"term": "", "explain": s})
     return out
 
-def apply_enrichment(poem, e):
+def apply_enrichment(rec, e):
+    """把模型返回的内容写进编辑层记录 rec（原文层只读，这里碰不到）。"""
     label = MODEL.split("/")[-1]        # 如 z-ai/glm-5.2 → glm-5.2
-    if _s(e.get("translation")):  poem["translation"] = _s(e["translation"])
-    if _s(e.get("appreciation")): poem["appreciation"] = _s(e["appreciation"])
-    if _s(e.get("english")):      poem["english"] = _s(e["english"])
+    if _s(e.get("translation")):  rec["translation"] = _s(e["translation"])
+    if _s(e.get("appreciation")): rec["appreciation"] = _s(e["appreciation"])
+    if _s(e.get("english")):      rec["english"] = _s(e["english"])
     notes = _parse_notes(e.get("notes"))
     if notes:
-        poem["notes"] = notes
+        rec["notes"] = notes
     if isinstance(e.get("themes"), list):
-        poem["themes"] = [t.strip() for t in e["themes"] if isinstance(t, str) and t.strip()][:4]
+        rec["themes"] = [t.strip() for t in e["themes"] if isinstance(t, str) and t.strip()][:4]
     pl = e.get("place")
     if isinstance(pl, dict) and isinstance(pl.get("lat"), (int, float)) and isinstance(pl.get("lng"), (int, float)):
-        poem["place"] = {"name": _s(pl.get("name")), "modern": _s(pl.get("modern")),
-                         "lat": float(pl["lat"]), "lng": float(pl["lng"])}
+        rec["place"] = {"name": _s(pl.get("name")), "modern": _s(pl.get("modern")),
+                        "lat": float(pl["lat"]), "lng": float(pl["lng"])}
+    # 断代：导入时按朝代给的占位年份（如全唐诗一律 750）在这里被模型的估计取代。
+    # 时间轴要看得出年代分布，全靠这一步。
+    y = e.get("year")
+    if isinstance(y, (int, float)) and -2000 < y < 2000:
+        rec["year"] = int(y)
     if _s(e.get("yearLabel")):
-        poem["yearLabel"] = _s(e["yearLabel"])
-    poem["english"] = poem.get("english", "")
-    poem["englishBy"] = label + " 译"
-    poem["enriched"] = True
-    poem["enrichedBy"] = label
+        rec["yearLabel"] = _s(e["yearLabel"])
+    rec["englishBy"] = label + " 译"
+    rec["enrichedBy"] = label
 
-def save(poems):
-    json.dump(poems, open(CORPUS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    with open(CORPUS_JS, "w", encoding="utf-8") as f:
-        f.write("/* 自动生成 — 原文来自 chinese-poetry（公有领域）；\n")
-        f.write("   译文/注释/赏析/英译/主题/地点由 GLM-4.7 生成，标 enrichedBy 者为 AI 生成·待校订。 */\n")
-        f.write("window.POEMS_IMPORTED = ")
-        json.dump(poems, f, ensure_ascii=False, indent=1)
-        f.write(";\n")
+
+def save_shards(enrich, source, slugs):
+    """只重写这次改动过的朝代分片 —— 50k 规模下全量重写太慢。"""
+    for slug in sorted(slugs):
+        rows = [enrich[i] for i in enrich if CL.SLUG.get(source[i]["dynasty"]) == slug]
+        rows.sort(key=lambda r: r["id"])
+        clean = [{k: r[k] for k in CL.ENRICH_FIELDS if k in r} for r in rows]
+        CL.write_jsonl(os.path.join(CL.ENRICH_DIR, slug + ".jsonl"), clean)
 
 def main():
     global MODEL, REASONING
@@ -159,71 +173,105 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--model", default=MODEL)
     ap.add_argument("--reasoning", action="store_true", help="开启思维链（更深，但慢 ~9x、贵 ~3x）")
+    ap.add_argument("--dry-run", action="store_true", help="只列待办与预估花费，不调 API、不写文件")
     args = ap.parse_args()
     MODEL = args.model
     REASONING = args.reasoning
 
-    key = load_key()
-    poems = json.load(open(CORPUS, encoding="utf-8"))
-    todo = [p for p in poems if not p.get("enriched")]
+    source = CL.load_source()
+    enrich = CL.load_enrich()
+    if not source:
+        sys.exit("原文层为空。先跑 tools/migrate_corpus.py --write 或 tools/build_corpus.py。")
+
+    # 待办 = 有原文、非精编（精编是手写的，不让模型覆盖）、编辑层还空着的
+    todo_ids = [i for i, s_ in source.items()
+                if not s_.get("curated") and not CL.is_enriched(enrich.get(i))]
+    todo_ids.sort(key=lambda i: (source[i]["dynastyOrder"], source[i]["title"]))
+
     if args.sample:
         # 按 (朝代, 体裁) 分桶，轮转抽取，尽量覆盖诗/词/曲/文各类
         buckets = {}
-        for p in todo:
-            buckets.setdefault((p["dynasty"], p["genre"]), []).append(p)
+        for i in todo_ids:
+            s_ = source[i]
+            buckets.setdefault((s_["dynasty"], s_["genre"]), []).append(i)
         keys = sorted(buckets.keys())
-        picked, i = [], 0
-        while len(picked) < args.sample and any(buckets[k] for k in keys):
-            k = keys[i % len(keys)]
-            if buckets[k]:
-                picked.append(buckets[k].pop(0))
-            i += 1
-        todo = picked
+        picked, k = [], 0
+        while len(picked) < args.sample and any(buckets[x] for x in keys):
+            b = keys[k % len(keys)]
+            if buckets[b]:
+                picked.append(buckets[b].pop(0))
+            k += 1
+        todo_ids = picked
     elif args.limit:
-        todo = todo[:args.limit]
-    print("待生成 %d / 共 %d 首，模型 %s，并发 %d" % (len(todo), len(poems), MODEL, args.workers))
-    if not todo:
+        todo_ids = todo_ids[:args.limit]
+
+    have = sum(1 for i in source if CL.is_enriched(enrich.get(i)))
+    print("原文 %d 篇，已有编辑层 %d 篇，本次待生成 %d 篇" % (len(source), have, len(todo_ids)))
+    print("模型 %s，并发 %d" % (MODEL, args.workers))
+    if args.dry_run:
+        by = {}
+        for i in todo_ids:
+            by[source[i]["dynasty"]] = by.get(source[i]["dynasty"], 0) + 1
+        print("待办分布：", "  ".join("%s %d" % kv for kv in sorted(by.items(), key=lambda x: -x[1])) or "（无）")
+        print("预估花费：约 $%.2f（按 $1.7/1000 首）" % (len(todo_ids) * 0.0017))
+        print("（--dry-run：未调用 API，未写任何文件。）")
+        return
+    if not todo_ids:
         print("没有需要生成的。"); return
 
-    done = 0; fail = 0
+    key = load_key()
+    done = 0; fail = 0; dirty = set(); since_save = 0
     t0 = time.time()
-    def work(p):
+
+    def work(pid):
+        p_ = source[pid]
         for attempt in range(3):
             try:
-                return p, call_glm(key, p)
+                return pid, call_glm(key, p_)
             except urllib.error.HTTPError as ex:
                 msg = ex.read().decode("utf-8", "ignore")[:200]
                 if ex.code in (429, 500, 502, 503):
                     time.sleep(2 * (attempt + 1)); continue
-                return p, {"__error__": "HTTP %s %s" % (ex.code, msg)}
+                return pid, {"__error__": "HTTP %s %s" % (ex.code, msg)}
             except Exception as ex:
                 time.sleep(1.5 * (attempt + 1))
                 if attempt == 2:
-                    return p, {"__error__": str(ex)[:200]}
-        return p, {"__error__": "重试耗尽"}
+                    return pid, {"__error__": str(ex)[:200]}
+        return pid, {"__error__": "重试耗尽"}
 
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
-        futs = [ex.submit(work, p) for p in todo]
+        futs = [ex.submit(work, i) for i in todo_ids]
         for fut in as_completed(futs):
-            p, e = fut.result()
+            pid, e = fut.result()
+            s_ = source[pid]
             if "__error__" in e:
                 fail += 1
-                print("  ✗ 《%s》%s — %s" % (p["title"], p["author"], e["__error__"]))
+                print("  ✗ 《%s》%s — %s" % (s_["title"], s_["author"], e["__error__"]))
             else:
                 try:
-                    apply_enrichment(p, e)   # 单条解析出错绝不能中断整批
-                    done += 1
-                    if done % 5 == 0 or done == len(todo):
+                    rec = enrich.setdefault(pid, {"id": pid, "themes": [], "place": None,
+                                                  "translation": "", "notes": [],
+                                                  "appreciation": "", "english": "",
+                                                  "englishBy": "", "enrichedBy": ""})
+                    apply_enrichment(rec, e)   # 单条解析出错绝不能中断整批
+                    dirty.add(CL.SLUG[s_["dynasty"]])
+                    done += 1; since_save += 1
+                    if done % 25 == 0 or done == len(todo_ids):
                         rate = done / max(1e-9, time.time() - t0)
-                        print("  ✓ %d/%d  《%s》%s  (%.1f 首/秒)" % (done, len(todo), p["title"], p["author"], rate))
+                        print("  ✓ %d/%d  《%s》%s  (%.1f 首/秒)" % (
+                            done, len(todo_ids), s_["title"], s_["author"], rate))
                 except Exception as ex:
                     fail += 1
-                    print("  ✗ 《%s》%s — 解析失败: %s" % (p["title"], p["author"], str(ex)[:120]))
-            if (done + fail) % 20 == 0:
-                save(poems)
-    save(poems)
+                    print("  ✗ 《%s》%s — 解析失败: %s" % (s_["title"], s_["author"], str(ex)[:120]))
+            if since_save >= 200:
+                save_shards(enrich, source, dirty); dirty.clear(); since_save = 0
+
+    if dirty or since_save:
+        save_shards(enrich, source, dirty or {CL.SLUG[source[i]["dynasty"]] for i in todo_ids})
     print("\n完成：成功 %d，失败 %d，用时 %.0f 秒。" % (done, fail, time.time() - t0))
-    print("已写回 data/corpus.json 与 data/corpus.js。刷新网页即可看到。")
+    print("已写回 data/enrich/。原文层未改动。")
+    print("接着跑 tools/build_site_data.py 生成网页用的数据文件。")
+
 
 if __name__ == "__main__":
     main()
