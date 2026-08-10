@@ -9,3 +9,6 @@ __pycache__/
 
 # 系统文件
 .DS_Store
+
+# 站点数据产物：由 tools/build_site_data.py 从 source/ + enrich/ 生成
+# 目前随仓库提交（GitHub Pages 直接从 main 发布，需要静态文件在库里）
