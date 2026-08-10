@@ -21,6 +21,7 @@
     h1 { font-size: 17px; letter-spacing: 4px; color: var(--cinnabar); margin: 0 0 2px; }
     .sub { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-bottom: 22px; }
     .sub a { color: var(--jade); }
+    .sub code { font-family: var(--mono); }
     h2 {
       font-size: 12px; letter-spacing: 3px; color: var(--cinnabar); font-weight: 700;
       margin: 28px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
@@ -40,6 +41,7 @@
     .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 40px; }
     .gap { font-size: 12px; color: var(--ink-soft); line-height: 1.9; }
     .gap b { color: var(--cinnabar); font-family: var(--mono); font-weight: 500; }
+    .note { font-size: 11.5px; color: var(--gold); line-height: 1.9; margin-top: 6px; }
     code { font-family: var(--mono); font-size: 11.5px; color: var(--jade); }
     .loading { color: var(--gold); font-size: 12px; }
   </style>
@@ -47,113 +49,104 @@
 <body>
   <div class="wrap">
     <h1>库 存</h1>
-    <div class="sub">内部页面，未挂在导航上 · <a href="index.html">← 回站点</a></div>
-    <div id="out" class="loading">读取语料中…</div>
+    <div class="sub">内部页面，未挂在导航上 · <a href="index.html">← 回站点</a>
+      · 数据来自 <code>data/site/</code> 的产物，改动语料后需重跑 <code>tools/build_site_data.py</code></div>
+    <div id="out" class="loading">读取中…</div>
   </div>
 
-  <script src="data/poems.js"></script>
-  <script src="data/corpus.js"></script>
-  <script src="js/forms.js"></script>
   <script>
   (function () {
     "use strict";
-    var POEMS = (window.POEMS || []).concat(window.POEMS_IMPORTED || []);
-    var DYNASTIES = window.DYNASTIES || [];
-    var N = POEMS.length;
-    POEMS.forEach(function (p) { p._form = window.classifyForm(p); });
+    var out = document.getElementById("out");
 
-    function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
-    function pct(n) { return N ? Math.round(n / N * 100) : 0; }
-
-    // 计数 → [{name,count}]，按 count 降序
-    function tally(fn) {
-      var m = {};
-      POEMS.forEach(function (p) {
-        var k = fn(p);
-        if (k == null || k === "") return;
-        m[k] = (m[k] || 0) + 1;
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>]/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c];
       });
-      return Object.keys(m).map(function (k) { return { name: k, count: m[k] }; })
-        .sort(function (a, b) { return b.count - a.count; });
     }
 
-    function table(head, rows) {
-      return '<table><tr><th>' + head + '</th><th class="n" style="text-align:right">篇</th><th class="pct" style="text-align:right">%</th></tr>' +
-        rows.map(function (r) {
-          return '<tr><td>' + esc(r.name) + '</td><td class="n">' + r.count +
-            '</td><td class="pct">' + pct(r.count) + '</td></tr>';
-        }).join("") + '</table>';
+    Promise.all(["manifest.json", "agg/authors.json", "agg/themes.json",
+                 "agg/forms.json", "agg/timeline.json"]
+      .map(function (p) {
+        return fetch("data/site/" + p).then(function (r) {
+          if (!r.ok) throw new Error(p + " → HTTP " + r.status);
+          return r.json();
+        });
+      }))
+      .then(render)
+      ["catch"](function (e) {
+        out.className = "";
+        out.innerHTML = '<p style="color:var(--cinnabar)">没能读到产物：' + esc(e.message) +
+          '<br><small style="color:var(--ink-soft)">先跑一次 <code>tools/build_site_data.py</code>，' +
+          '并以 http 方式访问本页。</small></p>';
+      });
+
+    function render(res) {
+      var m = res[0], authors = res[1], themes = res[2], forms = res[3], bands = res[4];
+      var N = m.total;
+      function pct(n) { return N ? Math.round(n / N * 100) : 0; }
+
+      function table(head, rows, unit) {
+        return '<table><tr><th>' + head + '</th><th class="n">' + (unit || "篇") +
+          '</th><th class="pct">%</th></tr>' +
+          rows.map(function (r) {
+            return '<tr><td>' + esc(r[0]) + '</td><td class="n">' + r[1] +
+              '</td><td class="pct">' + pct(r[1]) + '</td></tr>';
+          }).join("") + '</table>';
+      }
+
+      var layerRows = Object.keys(m.coverage).map(function (k) {
+        var n = m.coverage[k], p = pct(n);
+        return '<tr><td>' + esc(k) + '<div class="bar' + (p < 60 ? " warn" : "") +
+          '"><i style="width:' + p + '%"></i></div></td>' +
+          '<td class="n">' + n + '</td><td class="pct">' + p + '</td></tr>';
+      }).join("");
+
+      out.className = "";
+      out.innerHTML =
+        '<div class="kpis">' +
+          '<div class="kpi"><b>' + N + '</b><span>总篇数</span></div>' +
+          '<div class="kpi"><b>' + m.curated + '</b><span>精编</span></div>' +
+          '<div class="kpi"><b>' + m.authors + '</b><span>署名作者</span></div>' +
+          '<div class="kpi"><b>' + m.anon + '</b><span>佚名篇</span></div>' +
+          '<div class="kpi"><b>' + m.dynasties.length + '</b><span>朝代</span></div>' +
+          '<div class="kpi"><b>' + m.themes + '</b><span>主题词</span></div>' +
+          '<div class="kpi"><b>' + m.places + '</b><span>有坐标</span></div>' +
+        '</div>' +
+
+        '<h2>编 辑 层 覆 盖 率</h2>' +
+        '<table><tr><th>层</th><th class="n">篇</th><th class="pct">%</th></tr>' + layerRows + '</table>' +
+        (m.models.length ? '<p class="gap">生成来源：' + m.models.map(function (x) {
+          return '<code>' + esc(x.n) + '</code> <b>' + x.c + '</b>';
+        }).join(" ｜ ") + '</p>' : "") +
+
+        '<div class="cols">' +
+          '<div><h2>循 朝 代</h2>' +
+            table("朝代", m.dynasties.map(function (d) { return [d.k, d.count]; })) +
+            '<p class="note">断代可信的朝代：' +
+              (bands.filter(function (b) { return b.confident; }).map(function (b) { return b.k; }).join("、") || "—") +
+            '</p></div>' +
+          '<div><h2>循 体 裁</h2>' +
+            table("体裁", forms.map(function (f) { return [f.n, f.c]; })) + '</div>' +
+        '</div>' +
+
+        '<div class="cols">' +
+          '<div><h2>主 题（前 25，共 ' + m.themes + '）</h2>' +
+            table("主题", themes.slice(0, 25).map(function (t) { return [t.n, t.c]; })) +
+            '<p class="note">主题词由模型逐篇自由生成，没有受控词表：' +
+              themes.filter(function (t) { return t.c < 5; }).length +
+              ' 个主题不足 5 篇。扩库前值得先定一份词表并回标。</p>' +
+          '</div>' +
+          '<div><h2>作 者 存 篇（前 25）</h2>' +
+            table("作者", authors.slice(0, 25).map(function (a) { return [a.n, a.c]; })) + '</div>' +
+        '</div>' +
+
+        '<h2>索 引 与 产 物</h2>' +
+        '<p class="gap">build 指纹 <code>' + esc(m.build) + '</code>　｜　' +
+          '字词索引 <b>' + m.charsIndexed + '</b> 字（全库 ' + m.charsDistinct + ' 个不同字），' +
+          '每字最多 <b>' + m.charMaxHits + '</b> 例，其中 <b>' + m.charsTruncated + '</b> 字被截断　｜　' +
+          '检索范围 <code>' + esc(m.searchScope) + '</code></p>';
     }
-
-    // ---- 各编辑层的覆盖率 ----
-    var LAYERS = [
-      { key: "译文",     has: function (p) { return !!p.translation; } },
-      { key: "注释",     has: function (p) { return !!(p.notes && p.notes.length); } },
-      { key: "赏析",     has: function (p) { return !!p.appreciation; } },
-      { key: "英译",     has: function (p) { return !!p.english; } },
-      { key: "拼音",     has: function (p) { return !!p.pinyin; } },
-      { key: "主题",     has: function (p) { return !!(p.themes && p.themes.length); } },
-      { key: "地点坐标", has: function (p) { return !!(p.place && typeof p.place.lat === "number"); } },
-      { key: "纪年",     has: function (p) { return typeof p.year === "number" && !isNaN(p.year); } }
-    ];
-    var layerRows = LAYERS.map(function (L) {
-      var n = POEMS.filter(L.has).length;
-      var p = pct(n);
-      return '<tr><td>' + L.key + '<div class="bar' + (p < 60 ? " warn" : "") + '"><i style="width:' + p + '%"></i></div></td>' +
-        '<td class="n">' + n + '</td><td class="pct">' + p + '</td></tr>';
-    }).join("");
-
-    var curated = (window.POEMS || []).length;
-    var imported = (window.POEMS_IMPORTED || []).length;
-    var authors = {};
-    POEMS.forEach(function (p) { if (p.author && p.author !== "佚名") authors[p.author] = 1; });
-    var nAuthors = Object.keys(authors).length;
-    var anon = POEMS.filter(function (p) { return !p.author || p.author === "佚名"; }).length;
-    var enrichedBy = tally(function (p) { return p.enrichedBy; });
-    var dynOrder = {};
-    DYNASTIES.forEach(function (d, i) { dynOrder[d.key] = i; });
-
-    var dynRows = tally(function (p) { return p.dynasty; })
-      .sort(function (a, b) { return (dynOrder[a.name] == null ? 99 : dynOrder[a.name]) - (dynOrder[b.name] == null ? 99 : dynOrder[b.name]); });
-
-    document.getElementById("out").className = "";
-    document.getElementById("out").innerHTML =
-      '<div class="kpis">' +
-        '<div class="kpi"><b>' + N + '</b><span>总篇数</span></div>' +
-        '<div class="kpi"><b>' + curated + '</b><span>精编</span></div>' +
-        '<div class="kpi"><b>' + imported + '</b><span>导入</span></div>' +
-        '<div class="kpi"><b>' + nAuthors + '</b><span>署名作者</span></div>' +
-        '<div class="kpi"><b>' + anon + '</b><span>佚名篇</span></div>' +
-        '<div class="kpi"><b>' + dynRows.length + '</b><span>朝代</span></div>' +
-      '</div>' +
-
-      '<h2>编 辑 层 覆 盖 率</h2>' +
-      '<table><tr><th>层</th><th class="n" style="text-align:right">篇</th><th class="pct" style="text-align:right">%</th></tr>' +
-      layerRows + '</table>' +
-      (enrichedBy.length
-        ? '<p class="gap">生成来源：' + enrichedBy.map(function (e) {
-            return '<code>' + esc(e.name) + '</code> <b>' + e.count + '</b>';
-          }).join(" ｜ ") + '</p>'
-        : "") +
-
-      '<div class="cols">' +
-        '<div><h2>循 朝 代</h2>' + table("朝代", dynRows) + '</div>' +
-        '<div><h2>循 体 裁</h2>' + table("体裁", tally(function (p) { return p._form.sub; })) + '</div>' +
-      '</div>' +
-
-      '<div class="cols">' +
-        '<div><h2>循 主 题（前 25）</h2>' +
-          table("主题", (function () {
-            var m = {};
-            POEMS.forEach(function (p) { (p.themes || []).forEach(function (t) { m[t] = (m[t] || 0) + 1; }); });
-            return Object.keys(m).map(function (k) { return { name: k, count: m[k] }; })
-              .sort(function (a, b) { return b.count - a.count; }).slice(0, 25);
-          })()) + '</div>' +
-        '<div><h2>作 者 存 篇（前 25）</h2>' +
-          table("作者", tally(function (p) {
-            return (p.author && p.author !== "佚名") ? p.author : null;
-          }).slice(0, 25)) + '</div>' +
-      '</div>';
   })();
   </script>
 </body>

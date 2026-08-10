@@ -54,6 +54,8 @@ TAIL_MIN = 30           # 少于这么多篇的主题不单独成片，一起塞
 AUTHOR_BUCKETS = 64
 SEARCH_BUCKETS = 64
 CHAR_BUCKETS = 64
+LOOKUP_BUCKETS = 64     # id → (朝代序, 全文分片) —— 深链 #/poem/<id> 靠它定位
+SINGLE_CAP = 800        # 单字倒排最多留多少条（尚无相关性排序，先截断）
 CHAR_TOP = 1500         # 只为最常见的这些字建索引
 CHAR_MAX_HITS = 300     # 每字最多留多少例句（跨朝代抽样，非取前 N）
 CLOUD_TOP = 300         # 字云展示的字数
@@ -88,7 +90,8 @@ def first_line(text):
 
 
 def classify_label(rec):
-    """体裁标签 —— 与 js/forms.js 的 classifyForm 保持同一套规则。"""
+    """体裁标签。原先网页端也有一份同样的规则（js/forms.js），
+    现已统一到构建期：卡片里直接带 f 字段，前端不再分类。"""
     g = rec.get("genre")
     if g == "词": return ("词", "词", "词")
     if g == "曲": return ("曲", "曲", "曲")
@@ -279,18 +282,40 @@ def main():
     # ---- 搜索：标题 + 作者的二元组倒排 ----
     # 只索引标题与作者（正文不入索引），检索靠前端交二元组的候选集。
     inv = defaultdict(set)
+    single = defaultdict(set)
     for pid, r in full.items():
         for field in (r["title"], r["author"]):
             s2 = HAN.findall(field or "")
-            if len(s2) == 1:
-                inv[s2[0]].add(pid)
+            # 单字也要入索引，否则搜"月"找不到《月夜》—— 只有标题恰好是一个字时才命中
+            for ch in set(s2):
+                single[ch].add(pid)
             for i in range(len(s2) - 1):
                 inv[s2[i] + s2[i + 1]].add(pid)
-    sb = defaultdict(dict)
+    # 单字命中面太宽（"之""不"这类），先截断；等做了相关性排序再放开
+    for ch, ids in single.items():
+        inv[ch] |= set(sorted(ids)[:SINGLE_CAP])
+    # 每个桶自带一张卡片小表，倒排表只存表内下标。
+    # 这样一次检索 = 取一两个桶文件，不必再回头去抓 index/ 或 body/ 拼卡片。
+    sb = defaultdict(lambda: {"c": [], "g": {}, "_at": {}})
     for gram, ids in inv.items():
-        sb[bucket(gram, SEARCH_BUCKETS)][gram] = sorted(ids)
-    for k, payload in sb.items():
-        w("search/%02d.json" % k, payload)
+        B = sb[bucket(gram, SEARCH_BUCKETS)]
+        refs = []
+        for pid in sorted(ids):
+            if pid not in B["_at"]:
+                c = cards[pid]
+                B["_at"][pid] = len(B["c"])
+                B["c"].append([pid, c["t"], c["a"], c["d"], c["b"]])
+            refs.append(B["_at"][pid])
+        B["g"][gram] = refs
+    for k, B in sb.items():
+        w("search/%02d.json" % k, {"c": B["c"], "g": B["g"]})
+
+    # ---- id → (朝代序, 全文分片)，供 #/poem/<id> 直接定位 ----
+    lk = defaultdict(dict)
+    for pid, c in cards.items():
+        lk[bucket(pid, LOOKUP_BUCKETS)][pid] = [c["d"], c["b"]]
+    for k, payload in lk.items():
+        w("lookup/%02d.json" % k, payload)
 
     # ---- 字词索引 ----
     hits = defaultdict(lambda: defaultdict(list))   # 字 -> 朝代序 -> [(id, 例句)]
@@ -337,16 +362,31 @@ def main():
     fp = hashlib.md5(json.dumps(
         {p: (full[p]["text"], full[p].get("translation", "")) for p in sorted(full)},
         ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:10]
+    # 各编辑层的覆盖率 —— admin.html 靠这个判断哪一层还欠账，
+    # 不必再为了几个计数把整个语料塞进浏览器。
+    def has(f):
+        return sum(1 for r in full.values() if r.get(f))
+    coverage = {
+        "译文": has("translation"), "注释": has("notes"), "赏析": has("appreciation"),
+        "英译": has("english"), "拼音": has("pinyin"), "主题": has("themes"),
+        "地点坐标": len(places),
+        "断代年份": sum(1 for r in full.values() if not r["yearEstimated"]),
+    }
+    models = Counter(r.get("enrichedBy") for r in full.values() if r.get("enrichedBy"))
+
     manifest = {
         "build": fp,
         "total": len(full),
         "curated": len(curated),
+        "coverage": coverage,
+        "models": [{"n": k, "c": v} for k, v in models.most_common()],
+        "anon": sum(1 for r in full.values() if r["author"] == "佚名"),
         "dynasties": [{"k": k, "o": o, "slug": s, "span": sp,
                        **index_shards.get(s, {"shards": 0, "count": 0, "bodies": 0})}
                       for k, o, s, sp in CL.DYNASTIES if s in index_shards],
         "indexShard": INDEX_SHARD, "bodyChunk": BODY_CHUNK, "aggShard": AGG_SHARD,
         "authorBuckets": AUTHOR_BUCKETS, "searchBuckets": SEARCH_BUCKETS,
-        "charBuckets": CHAR_BUCKETS,
+        "charBuckets": CHAR_BUCKETS, "lookupBuckets": LOOKUP_BUCKETS,
         "authors": len(authors), "themes": len(theme_meta), "forms": len(form_meta),
         "places": len(places),
         "charsIndexed": len(top), "charsDistinct": len(freq),
@@ -365,7 +405,7 @@ def main():
     n_files = sum(len(fs) for _, _, fs in os.walk(SITE))
     total = dirsize("")
     print("\n产物 %d 个文件，合计 %.1f MB  (build %s)" % (n_files, total / 1e6, fp))
-    for d in ["index", "body", "agg", "search", "chars"]:
+    for d in ["index", "body", "agg", "search", "chars", "lookup"]:
         print("   %-8s %7.2f MB" % (d, dirsize(d) / 1e6))
     print("   %-8s %7.2f MB" % ("curated", os.path.getsize(os.path.join(SITE, "curated.json")) / 1e6))
     print("\n字词索引：%d 个不同字，建索引 %d 个，其中 %d 个因超过 %d 例被截断" % (

@@ -1,4 +1,10 @@
 """
+migrate_corpus.py — 一次性迁移【已于 2026-08 执行完毕，仅作留档】
+
+输入 data/corpus.json 与 data/poems.js 在迁移后已删除，本脚本不能再跑；
+保留它是为了说明当时是怎么拆的，以及 data/id_map.json 里的映射从何而来。
+
+原始说明如下 ——
 migrate_corpus.py — 一次性迁移：把旧的单体语料拆成 原文层 / 编辑层。
 
     读  data/corpus.json   （2954 篇，位置编号 id "imp-d594-0"）
