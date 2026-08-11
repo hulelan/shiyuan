@@ -89,33 +89,58 @@
   }
 
   // ---------- 首页：一日一篇 ----------
-  var curatedCache = null, homeOffset = 0;
+  var homeOffset = 0;
   function viewHome() {
     var host = $("#view-home"), ok = guard();
     loading(host);
-    Store.curated().then(function (pool) {
+    Promise.all([Store.curated(), Store.art()]).then(function (res) {
       if (!ok()) return;
-      curatedCache = pool;
+      var pool = res[0], art = res[1] || [];
       if (!pool.length) return failed(host, new Error("精编集为空"));
       var day = Math.floor(Date.now() / 86400000);
       var p = pool[(day + homeOffset) % pool.length];
       var lines = (p.text || "").split("\n");
       var prose = p.genre === "文" || lines.some(function (l) { return l.length > 22; });
+      var pic = art.filter(function (a) { return a.poem === p.id; })[0];
 
-      host.innerHTML =
-        '<div class="daily">' +
-          '<div class="daily-seal">詩淵</div>' +
-          '<div class="daily-text' + (prose ? " prose" : "") + '" id="dailyText">' +
-            lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") +
-          '</div>' +
-          '<div class="daily-attr">' + esc(p.dynasty) + '　' + esc(p.author) +
-            '　《' + esc(p.title) + '》</div>' +
-          '<div class="daily-acts">' +
-            '<button class="quiet" id="dailyOpen">释　文</button>' +
-            '<span class="daily-sep">·</span>' +
-            '<button class="quiet" id="dailyNext">换一篇</button>' +
-          '</div>' +
-        '</div>';
+      // 竖排只用在短篇上：长调竖排会溢出，横排反而稳当
+      var chars = (p.text || "").replace(/\s/g, "").length;
+      var vertical = pic && !prose && chars <= 60;
+
+      var verse = '<div class="daily-text' + (prose ? " prose" : "") +
+        (vertical ? " vertical" : "") + '" id="dailyText">' +
+        lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
+      var attr = '<div class="daily-attr">' + esc(p.dynasty) + '　' + esc(p.author) +
+        '　《' + esc(p.title) + '》</div>';
+      var acts = '<div class="daily-acts">' +
+        '<button class="quiet" id="dailyOpen">释　文</button>' +
+        '<span class="daily-sep">·</span>' +
+        '<button class="quiet" id="dailyNext">换一篇</button></div>';
+
+      if (pic) {
+        var cap = [pic.dynasty, pic.artist].filter(Boolean).join(" ") +
+          (pic.title ? '《' + pic.title + '》' : "");
+        var credit = pic.credit
+          ? (pic.link ? '<a href="' + esc(pic.link) + '" target="_blank" rel="noopener">' +
+              esc(pic.credit) + '</a>' : esc(pic.credit))
+          : "";
+        host.innerHTML =
+          '<div class="daily paired">' +
+            '<figure class="daily-art">' +
+              '<img src="assets/art/' + esc(pic.file) + '" alt="' + esc(cap) + '"' +
+                (pic.w && pic.h ? ' width="' + pic.w + '" height="' + pic.h + '"' : "") + '>' +
+              '<figcaption>' + esc(cap) + (credit ? '<span>' + credit + '</span>' : "") +
+              '</figcaption>' +
+            '</figure>' +
+            '<div class="daily-words">' +
+              '<div class="daily-seal">詩淵</div>' + verse + attr + acts +
+            '</div>' +
+          '</div>';
+      } else {
+        host.innerHTML = '<div class="daily">' +
+          '<div class="daily-seal">詩淵</div>' + verse + attr + acts + '</div>';
+      }
+
       function open() { go("/poem/" + p.id); }
       $("#dailyText").addEventListener("click", open);
       $("#dailyOpen").addEventListener("click", open);

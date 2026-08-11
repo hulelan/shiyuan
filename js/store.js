@@ -55,6 +55,14 @@ window.Store = (function () {
     // 首页只读这一个文件
     curated: function () { return get("curated.json"); },
 
+    /* 配画清单。刻意不走 data/site/ 的产物：它是手写的，
+       加一幅画只需添一行 + 放一张图，不必重跑构建。没有这个文件也不算错。 */
+    art: function () {
+      return fetch("assets/art/index.json")
+        .then(function (r) { return r.ok ? r.json() : []; })
+        ["catch"](function () { return []; });
+    },
+
     indexShard: function (slug, k) { return get("index/" + slug + "-" + p3(k) + ".json"); },
 
     // 卡片 -> 全文。卡片自带朝代序 d 与分片号 b，一次抓取即可。

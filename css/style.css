@@ -531,3 +531,56 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   border-radius: 14px; cursor: pointer; transition: all .15s;
 }
 .facet-toggle:hover { color: var(--cinnabar); border-color: var(--cinnabar-soft); }
+
+/* ============ 首页配画版式 ============ */
+/* 画在左、诗在右，中间一道细线 —— 参考画配诗的招贴。
+   没配画时首页仍是纯文字的 .daily，两种版式互不影响。 */
+.daily.paired {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr);
+  gap: 0; align-items: stretch; text-align: initial;
+  min-height: calc(100vh - 230px); padding: 26px 0 48px;
+}
+.daily-art {
+  margin: 0; display: flex; flex-direction: column; justify-content: center;
+  padding-right: 34px; min-width: 0;
+}
+.daily-art img {
+  width: 100%; height: auto; display: block; max-height: 74vh; object-fit: contain;
+  object-position: center;
+}
+.daily-art figcaption {
+  margin-top: 12px; font-size: 10.5px; letter-spacing: 1.5px; color: var(--gold);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+}
+.daily-art figcaption span { color: var(--ink-soft); opacity: .75; }
+.daily-art figcaption a { color: var(--ink-soft); opacity: .75; text-decoration: none; border-bottom: 1px dotted var(--line); }
+.daily-art figcaption a:hover { color: var(--cinnabar); }
+
+.daily-words {
+  border-left: 1px solid var(--line); padding-left: 34px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; min-width: 0;
+}
+.daily.paired .daily-seal { margin-bottom: 26px; }
+
+/* 竖排：右起成列，是这类招贴最认得出的样子。只用在短篇上。 */
+.daily-text.vertical {
+  writing-mode: vertical-rl; text-orientation: upright;
+  max-height: 60vh; margin: 0 auto 24px;
+}
+.daily-text.vertical p {
+  font-size: 19px; letter-spacing: 5px; line-height: 2.1; margin: 0;
+}
+.daily.paired .daily-attr { letter-spacing: 2px; }
+
+@media (max-width: 860px) {
+  .daily.paired { grid-template-columns: 1fr; min-height: 0; padding: 16px 0 40px; }
+  .daily-art { padding-right: 0; }
+  .daily-art img { max-height: 46vh; }
+  .daily-words { border-left: none; border-top: 1px solid var(--line); padding: 26px 0 0; margin-top: 22px; }
+  .daily.paired .daily-seal { margin-bottom: 18px; }
+  /* 窄屏竖排会把诗挤成很高一条，改回横排 */
+  .daily-text.vertical { writing-mode: horizontal-tb; max-height: none; }
+  .daily-text.vertical p { font-size: 17px; letter-spacing: 3px; line-height: 2.3; }
+}
