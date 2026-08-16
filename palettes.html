@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>诗渊 · 色板样张</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/palettes.css">
+<style>
+  /* 这一页自己的脚手架。样张里的东西全部用站上真的 class，
+     免得看着好看、装到站上却是另一回事。 */
+  body { background: #6f6a60; padding: 0 0 60px; }
+  .page-head {
+    position: sticky; top: 0; z-index: 10; background: #2b2823; color: #e8e0cf;
+    padding: 14px 22px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    font-family: "Songti SC", serif;
+  }
+  .page-head h1 { margin: 0; font-size: 17px; letter-spacing: 4px; font-weight: 400; }
+  .page-head p { margin: 0; font-size: 12px; letter-spacing: 1px; color: #a49a86; }
+  .jump { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+  .jump a {
+    color: #d8ccb4; text-decoration: none; font-size: 12px; letter-spacing: 2px;
+    padding: 3px 10px; border: 1px solid #4a453d; border-radius: 13px;
+  }
+  .jump a:hover { color: #fff; border-color: #a8322d; background: #a8322d; }
+
+  .sample { margin: 22px auto; max-width: 1000px; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 10px 34px rgba(0,0,0,0.34); background: var(--paper); color: var(--ink); }
+  .sample-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 9px 18px; background: var(--chrome-lo); color: var(--chrome-ink);
+    font-family: var(--serif); font-size: 13px; letter-spacing: 3px;
+  }
+  .sample-bar b { color: var(--chrome-ink-hi); font-weight: 400; }
+  .sample-bar em { font-style: normal; font-size: 11px; letter-spacing: 1px; opacity: .7; }
+  .swatches { display: flex; gap: 0; margin-left: auto; }
+  .swatches i { width: 26px; height: 16px; display: block; }
+  .try {
+    font-family: var(--serif); font-size: 11.5px; letter-spacing: 2px; cursor: pointer;
+    padding: 3px 12px; border-radius: 12px; border: 1px solid var(--chrome-ink);
+    background: none; color: var(--chrome-ink-hi);
+  }
+  .try:hover { background: var(--cinnabar); border-color: var(--cinnabar); color: var(--on-accent); }
+  .try.on { background: var(--cinnabar); border-color: var(--cinnabar); color: var(--on-accent); }
+
+  .sample-body { padding: 0 22px 24px; background: var(--paper);
+    background-image:
+      radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--gold) 6%, transparent), transparent 40%),
+      radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--jade) 5%, transparent), transparent 42%); }
+  /* 样张里的首页版式不占满一屏 */
+  .sample .daily.paired { min-height: 0; padding: 14px 0 16px; grid-template-columns: 1.25fr 1fr; }
+  .sample .daily-art { padding-right: 26px; }
+  .sample .daily-art img { max-height: 168px; }
+  .sample .daily-art figcaption { margin-top: 8px; }
+  .sample .daily-words { padding-left: 26px; }
+  .sample .daily.paired .daily-seal { margin-bottom: 14px; padding: 6px 3px; }
+  .sample .daily-text.vertical { max-height: 152px; margin-bottom: 16px; }
+  .sample .daily-text.vertical p { font-size: 16px; letter-spacing: 4px; }
+  .sample .daily-acts { margin-top: 16px; }
+  .sample .grid { grid-template-columns: repeat(3, 1fr); }
+  .sample .card { min-height: 0; padding: 10px 12px 9px; }
+  .sample .card .excerpt { -webkit-line-clamp: 2; margin-top: 5px; }
+  .strip { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+           padding: 11px 0 2px; border-top: 1px solid var(--line); margin-top: 10px; }
+  .note { color: var(--ink-soft); font-size: 12px; letter-spacing: 1px; line-height: 1.8;
+          padding: 9px 0 0; }
+  .note b { color: var(--cinnabar); font-weight: 400; }
+
+  /* 六套并排 —— 只放首页那一版，六个挨着看才分得出高下 */
+  .compare { max-width: 900px; margin: 22px auto 0; display: grid;
+             grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .mini { border-radius: 6px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+          background: var(--paper); color: var(--ink); cursor: pointer;
+          text-decoration: none; display: block; }
+  .mini:hover { box-shadow: 0 8px 26px rgba(0,0,0,0.45); }
+  .mini-head { padding: 5px 10px; background: var(--chrome-lo); color: var(--chrome-ink-hi);
+               font-family: var(--serif); font-size: 11.5px; letter-spacing: 2.5px;
+               display: flex; align-items: center; }
+  .mini-head .sw { margin-left: auto; display: flex; }
+  .mini-head .sw i { width: 11px; height: 11px; display: block; }
+  .mini-body { padding: 10px 12px 12px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 0; }
+  .mini-body img { width: 100%; height: 92px; object-fit: cover; display: block; }
+  .mini-cap { font-size: 8.5px; letter-spacing: .5px; color: var(--gold); margin-top: 5px; }
+  .mini-art { padding-right: 11px; }
+  .mini-words { border-left: 1px solid var(--line); padding-left: 11px;
+                display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .mini-v { writing-mode: vertical-rl; text-orientation: upright; max-height: 92px; }
+  .mini-v p { margin: 0; font-size: 11px; letter-spacing: 2.5px; line-height: 1.9; color: var(--ink); }
+  .mini-attr { font-size: 8.5px; letter-spacing: 1.5px; color: var(--gold); margin-top: 7px; }
+  .mini-chips { grid-column: 1 / -1; display: flex; gap: 4px; align-items: center;
+                margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .mini-chips span { font-size: 8.5px; letter-spacing: 1px; padding: 2px 7px;
+                     border: 1px solid var(--line); border-radius: 9px; color: var(--ink-soft); }
+  .mini-chips span.on { background: var(--jade); color: var(--on-accent); border-color: var(--jade); }
+  .mini-chips b { font-size: 8.5px; font-weight: 400; letter-spacing: 1px; padding: 2px 7px;
+                  background: var(--cinnabar); color: var(--seal-ink); border-radius: 3px; }
+  .mini-chips em { font-style: normal; font-size: 8.5px; color: var(--jade); margin-left: auto; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>色板样张</h1>
+  <p>同一套版式，六种颜色。点「全站试用」再回首页，整站都会跟着换。</p>
+  <nav class="jump">
+    <a href="#zhusha">朱砂纸本</a><a href="#su">素宣</a><a href="#ye">夜读</a>
+    <a href="#qing">青绿</a><a href="#cha">茶褐</a><a href="#qinghua">青花</a>
+    <a href="index.html">← 回站</a>
+  </nav>
+</div>
+
+<div class="compare" id="compare"></div>
+<div id="samples"></div>
+
+<script>
+var PALETTES = [
+  { k: "zhusha", name: "朱砂纸本", note: "现在站上就是这套。暖纸、朱砂、赭金、青碧四色齐用，热闹，也最容易显得杂。" },
+  { k: "su",     name: "素宣",     note: "生宣的白，墨压到近黑，赭金收成灰褐 —— 只剩一点朱砂是活的。最接近你给的那几张招贴。" },
+  { k: "ye",     name: "夜读",     note: "同一套版式的深底。朱砂提亮才压得住黑，纸色反过来当字色。" },
+  { k: "qing",   name: "青绿",     note: "石青石绿打底，跟隔壁千里江山图那个站是一路。两站并排开着不打架。" },
+  { k: "cha",    name: "茶褐",     note: "旧纸。所有颜色都往下压一档，像一本翻久了的集子；对比低，读长文舒服。" },
+  { k: "qinghua",name: "青花",     note: "白瓷底，主色换成靛青 —— 印是蓝的。六套里唯一的冷色，也最不像「古籍网站」。" }
+];
+
+var SWATCH = ["--paper", "--paper-lo", "--line", "--gold", "--jade", "--cinnabar", "--ink"];
+
+function esc(s) { return String(s).replace(/[&<>]/g, function (c) {
+  return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+
+var POEM = ["常记溪亭日暮", "沉醉不知归路", "兴尽晚回舟", "误入藕花深处",
+            "争渡，争渡", "惊起一滩鸥鹭"];
+var CARDS = [
+  { d: "唐", t: "静夜思", a: "李白", x: "床前明月光，疑是地上霜。举头望明月，低头思故乡。", tags: ["思乡", "月"] },
+  { d: "宋", t: "水调歌头", a: "苏轼", x: "明月几时有？把酒问青天。不知天上宫阙，今夕是何年。", tags: ["中秋", "怀人"] },
+  { d: "唐", t: "登鹳雀楼", a: "王之涣", x: "白日依山尽，黄河入海流。欲穷千里目，更上一层楼。", tags: ["登临"] }
+];
+
+function sample(p) {
+  var sw = SWATCH.map(function (v) {
+    return '<i style="background:var(' + v + ')"></i>'; }).join("");
+  var lines = POEM.map(function (l) { return "<p>" + l + "</p>"; }).join("");
+  var cards = CARDS.map(function (c, i) {
+    return '<div class="card">' +
+      (i === 0 ? '<span class="card-badge">译</span>' : "") +
+      '<div class="dyn">' + c.d + '</div><h3>' + c.t + "</h3>" +
+      '<div class="author">' + c.a + '</div>' +
+      '<div class="excerpt">' + c.x + "</div>" +
+      '<div class="tags">' + c.tags.map(function (t) {
+        return '<span class="tag">' + t + "</span>"; }).join("") + "</div></div>";
+  }).join("");
+
+  return '<section class="sample" id="' + p.k + '" data-palette="' + p.k + '">' +
+    '<div class="sample-bar"><b>' + p.name + "</b><em>data-palette=&quot;" + p.k + "&quot;</em>" +
+      '<button class="try" data-set="' + p.k + '">全站试用</button>' +
+      '<div class="swatches">' + sw + "</div></div>" +
+    '<div class="sample-body">' +
+
+      /* 首页：画配诗 */
+      '<div class="daily paired">' +
+        '<figure class="daily-art">' +
+          '<img src="assets/art/e025a1267aa1.jpg" alt="">' +
+          "<figcaption><span>王希孟</span><span>千里江山图·局部</span>" +
+          "<span>故宫博物院</span></figcaption></figure>" +
+        '<div class="daily-words">' +
+          '<div class="daily-seal">宋 · 词</div>' +
+          '<div class="daily-text vertical">' + lines + "</div>" +
+          '<div class="daily-attr">李清照 · 如梦令</div>' +
+          '<div class="daily-acts"><button class="quiet">换一篇</button>' +
+          '<span class="daily-sep">·</span><button class="quiet">读全文</button></div>' +
+        "</div></div>" +
+
+      /* 诗文库：卡片 */
+      '<div class="grid">' + cards + "</div>" +
+
+      /* 各种控件挤在一处，看颜色打不打架 */
+      '<div class="strip">' +
+        '<span class="facet-group-label">体裁</span>' +
+        '<span class="chip active">五言绝句<i>318</i></span>' +
+        '<span class="chip">七言律诗<i>204</i></span>' +
+        '<span class="chip">词<i>612</i></span>' +
+        '<span class="au-seal">李</span><span class="au-name">李清照</span>' +
+        '<span class="au-dyn">宋</span><span class="au-n">42 篇</span>' +
+        '<span class="ap-place">汴京</span>' +
+        '<span class="wr-line">举头望<mark>明月</mark>，低头思故乡</span>' +
+        '<span class="loading">载入中</span>' +
+        '<button class="more-btn">再看一些</button>' +
+      "</div>" +
+      '<div class="note">' + p.note + "</div>" +
+    "</div></section>";
+}
+
+function mini(p) {
+  var sw = ["--paper", "--line", "--gold", "--jade", "--cinnabar", "--ink"].map(function (v) {
+    return '<i style="background:var(' + v + ')"></i>'; }).join("");
+  var lines = POEM.slice(0, 4).map(function (l) { return "<p>" + l + "</p>"; }).join("");
+  return '<a class="mini" href="#' + p.k + '" data-palette="' + p.k + '">' +
+    '<div class="mini-head">' + p.name + '<span class="sw">' + sw + "</span></div>" +
+    '<div class="mini-body">' +
+      '<div class="mini-art"><img src="assets/art/e025a1267aa1.jpg" alt="">' +
+        '<div class="mini-cap">王希孟 · 千里江山图 · 故宫博物院</div></div>' +
+      '<div class="mini-words"><div class="mini-v">' + lines + "</div>" +
+        '<div class="mini-attr">李清照 · 如梦令</div></div>' +
+      '<div class="mini-chips"><b>宋</b><span class="on">词</span><span>婉约</span>' +
+        "<em>42 篇</em></div>" +
+    "</div></a>";
+}
+document.getElementById("compare").innerHTML = PALETTES.map(mini).join("");
+document.getElementById("samples").innerHTML = PALETTES.map(sample).join("");
+
+var current = null;
+try { current = localStorage.getItem("palette"); } catch (e) {}
+
+function paint() {
+  [].forEach.call(document.querySelectorAll(".try"), function (b) {
+    var on = b.getAttribute("data-set") === (current || "zhusha");
+    b.classList.toggle("on", on);
+    b.textContent = on ? "站上正用" : "全站试用";
+  });
+}
+paint();
+
+document.addEventListener("click", function (e) {
+  var b = e.target.closest ? e.target.closest(".try") : null;
+  if (!b) return;
+  current = b.getAttribute("data-set");
+  try {
+    if (current === "zhusha") localStorage.removeItem("palette");
+    else localStorage.setItem("palette", current);
+  } catch (err) {}
+  paint();
+});
+</script>
+</body>
+</html>

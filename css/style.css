@@ -1,15 +1,31 @@
+/* ============================================================
+   色板 —— 全站颜色只从这里出。
+   下面每一条规则都不许再写死颜色：要一层浅淡，就用
+   color-mix() 从这里的某个色兑出来，这样换色板才是真的换。
+   备用色板见 palettes.html，把 <html data-palette="..."> 一改即可预览。
+   ============================================================ */
 :root {
   --ink:      #1a1a1a;
   --ink-soft: #3d3a35;
-  --paper:    #f4efe4;
-  --paper-2:  #ece4d3;
-  --cinnabar: #a8322d;   /* 朱砂 */
+  --paper:    #f4efe4;   /* 页面底色 */
+  --paper-2:  #ece4d3;   /* 页眉渐变的深端 */
+  --paper-hi: #fbf7ec;   /* 卡片/浮层的浅面 */
+  --paper-lo: #f1e9d7;   /* 卡片/浮层的深面 */
+  --cinnabar: #a8322d;   /* 朱砂 —— 主色，用得最多 */
   --cinnabar-soft: #c65b4e;
-  --seal:     #b03a2e;
-  --jade:     #4a6b5a;
-  --gold:     #b08d57;
-  --line:     #d8ccb4;
-  --shadow:   rgba(60, 45, 20, 0.14);
+  --jade:     #4a6b5a;   /* 青碧 —— 次色：标签、地点、篇数 */
+  --gold:     #b08d57;   /* 赭金 —— 三级信息：年代、拼音、注脚 */
+  --line:     #d8ccb4;   /* 细线 */
+
+  --on-accent: #fff;                    /* 压在朱砂/青碧实色上的字 */
+  --seal-ink:  #fbeee0;                 /* 印章里的字，比纯白暖一点 */
+  --sheen:     var(--sheen);  /* 浅色控件的高光底 */
+  --scrim:     var(--scrim);  /* 详情浮层背后的暗幕 */
+  --shadow:      rgba(60, 45, 20, 0.14);
+  --shadow-soft: rgba(60, 45, 20, 0.08);
+  --shadow-deep: rgba(0, 0, 0, 0.35);
+  --map-bg:    #dfe6e2;                 /* 地图无瓦片时的底 */
+
   --serif:    "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", Georgia, serif;
   --serif-en: Georgia, "Times New Roman", serif;
 }
@@ -27,8 +43,8 @@ html, body {
 
 body {
   background-image:
-    radial-gradient(circle at 18% 12%, rgba(176,141,87,0.06), transparent 40%),
-    radial-gradient(circle at 82% 78%, rgba(74,107,90,0.05), transparent 42%);
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--gold) 6%, transparent), transparent 40%),
+    radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--jade) 5%, transparent), transparent 42%);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -39,7 +55,7 @@ body {
   align-items: center;
   gap: 18px;
   padding: 9px 22px;
-  background: linear-gradient(180deg, rgba(244,239,228,0.97), rgba(236,228,211,0.94));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--paper) 97%, transparent), color-mix(in srgb, var(--paper-2) 94%, transparent));
   border-bottom: 2px solid var(--line);
   position: sticky;
   top: 0;
@@ -54,7 +70,7 @@ body {
   letter-spacing: 5px;
   color: var(--cinnabar);
   font-weight: 700;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow: 0 1px 0 var(--sheen);
 }
 .brand-sub { color: var(--ink-soft); letter-spacing: 2px; font-size: 11px; }
 
@@ -72,8 +88,8 @@ body {
   transition: all .18s;
   position: relative;
 }
-.tabs button:hover { color: var(--cinnabar); background: rgba(168,50,45,0.06); }
-.tabs button.active { color: #fff; background: var(--cinnabar); box-shadow: 0 2px 6px var(--shadow); }
+.tabs button:hover { color: var(--cinnabar); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
+.tabs button.active { color: var(--on-accent); background: var(--cinnabar); box-shadow: 0 2px 6px var(--shadow); }
 
 .searchbox { width: 100%; max-width: 250px; margin-left: auto; }
 .searchbox input {
@@ -81,14 +97,14 @@ body {
   padding: 6px 13px;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: rgba(255,255,255,0.6);
+  background: var(--sheen);
   font-family: var(--serif);
   font-size: 13px;
   color: var(--ink);
   outline: none;
   transition: border .18s, box-shadow .18s;
 }
-.searchbox input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px rgba(168,50,45,0.12); }
+.searchbox input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cinnabar) 12%, transparent); }
 
 /* ---------- Views ---------- */
 main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
@@ -112,13 +128,13 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   padding: 4px 11px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255,255,255,0.5);
+  background: var(--sheen);
   color: var(--ink-soft);
   cursor: pointer;
   transition: all .16s;
 }
 .chip:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); }
-.chip.active { background: var(--jade); color: #fff; border-color: var(--jade); }
+.chip.active { background: var(--jade); color: var(--on-accent); border-color: var(--jade); }
 
 /* ---------- Poem cards ---------- */
 .grid {
@@ -127,7 +143,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   gap: 11px;
 }
 .card {
-  background: linear-gradient(160deg, #fbf7ec, #f1e9d7);
+  background: linear-gradient(160deg, var(--paper-hi), var(--paper-lo));
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 13px 14px 12px;
@@ -162,27 +178,27 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .card .tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
 .tag {
   font-size: 10px; letter-spacing: 1px; padding: 1px 7px;
-  background: rgba(74,107,90,0.1); color: var(--jade); border-radius: 9px;
+  background: color-mix(in srgb, var(--jade) 10%, transparent); color: var(--jade); border-radius: 9px;
 }
 .count { text-align: center; color: var(--ink-soft); font-size: 11.5px; margin-top: 22px; letter-spacing: 1px; }
 .card-badge {
   position: absolute; top: 8px; right: 8px; z-index: 2;
   width: 17px; height: 17px; border-radius: 50%;
-  background: var(--jade); color: #fbf7ec; font-size: 10.5px;
+  background: var(--jade); color: var(--paper-hi); font-size: 10.5px;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 3px var(--shadow);
 }
 .more-btn {
   display: block; margin: 20px auto 0; padding: 7px 22px;
   font-family: var(--serif); font-size: 12.5px; letter-spacing: 2px;
-  color: var(--cinnabar); background: rgba(255,255,255,0.5);
+  color: var(--cinnabar); background: var(--sheen);
   border: 1px solid var(--line); border-radius: 20px; cursor: pointer;
   transition: all .16s;
 }
-.more-btn:hover { background: var(--cinnabar); color: #fff; border-color: var(--cinnabar); }
+.more-btn:hover { background: var(--cinnabar); color: var(--on-accent); border-color: var(--cinnabar); }
 .ai-note {
   margin: 14px 0 2px; padding: 7px 12px; border-radius: 6px;
-  background: rgba(176,141,87,0.12); border: 1px dashed var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px dashed var(--gold);
   color: var(--ink-soft); font-size: 12.5px; letter-spacing: .5px; text-align: center;
 }
 
@@ -201,7 +217,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 /* ---------- Detail overlay ---------- */
 .overlay {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(30, 22, 10, 0.55);
+  background: var(--scrim);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 40px 16px; overflow-y: auto;
   backdrop-filter: blur(3px);
@@ -209,11 +225,11 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .overlay.hidden { display: none; }
 .poem-detail {
   background: var(--paper);
-  background-image: linear-gradient(160deg, #faf6ea, #efe6d3);
+  background-image: linear-gradient(160deg, var(--paper-hi), var(--paper-lo));
   max-width: 760px; width: 100%;
   border-radius: 12px;
   border: 1px solid var(--gold);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  box-shadow: 0 20px 60px var(--shadow-deep);
   padding: 34px 40px 40px;
   position: relative;
   animation: rise .28s ease;
@@ -222,17 +238,17 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .close-btn {
   position: absolute; top: 16px; right: 18px;
   width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
-  background: rgba(255,255,255,0.5); color: var(--ink-soft); font-size: 18px;
+  background: var(--sheen); color: var(--ink-soft); font-size: 18px;
   cursor: pointer; line-height: 1; transition: all .16s;
 }
-.close-btn:hover { background: var(--cinnabar); color: #fff; border-color: var(--cinnabar); }
+.close-btn:hover { background: var(--cinnabar); color: var(--on-accent); border-color: var(--cinnabar); }
 
 .pd-head { text-align: center; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 8px; }
 .pd-head h2 { margin: 0; font-size: 23px; letter-spacing: 3px; color: var(--ink); }
 .pd-meta { margin-top: 7px; font-size: 12px; color: var(--ink-soft); letter-spacing: 1px; }
 .pd-meta .seal {
   display: inline-block; margin-left: 8px; padding: 1px 8px;
-  background: var(--cinnabar); color: #fbeee0; border-radius: 3px; font-size: 12px; letter-spacing: 2px;
+  background: var(--cinnabar); color: var(--seal-ink); border-radius: 3px; font-size: 12px; letter-spacing: 2px;
 }
 .pd-place { font-size: 13px; color: var(--jade); margin-top: 6px; letter-spacing: 1px; }
 
@@ -327,9 +343,9 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .mini-chip {
   font-family: var(--serif); cursor: pointer; font-size: 12.5px; letter-spacing: 1px;
   padding: 4px 11px; border: 1px solid var(--line); border-radius: 14px;
-  background: rgba(255,255,255,0.55); color: var(--ink-soft); transition: all .16s;
+  background: var(--sheen); color: var(--ink-soft); transition: all .16s;
 }
-.mini-chip:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); background: #fff; }
+.mini-chip:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); background: var(--paper-hi); }
 .mini-chip i { font-style: normal; font-size: 10.5px; color: var(--gold); margin-left: 5px; }
 .dim { color: var(--gold); font-size: 12px; }
 
@@ -337,10 +353,10 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .author-search { max-width: 340px; margin: 0 auto 16px; }
 .author-search input {
   width: 100%; padding: 8px 16px; border: 1px solid var(--line); border-radius: 18px;
-  background: rgba(255,255,255,0.6); font-family: var(--serif); font-size: 13.5px;
+  background: var(--sheen); font-family: var(--serif); font-size: 13.5px;
   letter-spacing: 1px; color: var(--ink); outline: none; text-align: center;
 }
-.author-search input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px rgba(168,50,45,0.12); }
+.author-search input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cinnabar) 12%, transparent); }
 .author-index {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 6px;
 }
@@ -349,10 +365,10 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   padding: 7px 10px; border: 1px solid transparent; border-radius: 5px;
   transition: background .14s, border-color .14s;
 }
-.au-cell:hover { background: rgba(255,255,255,0.6); border-color: var(--line); }
+.au-cell:hover { background: var(--sheen); border-color: var(--line); }
 .au-seal {
   flex: none; width: 22px; height: 22px; border-radius: 3px;
-  background: var(--cinnabar); color: #fbeee0; font-size: 13px;
+  background: var(--cinnabar); color: var(--seal-ink); font-size: 13px;
   display: flex; align-items: center; justify-content: center; opacity: .88;
 }
 .au-name { font-size: 14px; letter-spacing: 1px; color: var(--ink); }
@@ -367,16 +383,16 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   min-width: 80px; text-align: right; padding-right: 8px;
 }
 .type-group .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
-.type-group .chip.active i { color: rgba(255,255,255,0.75); }
+.type-group .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
 
 /* ============ 字词视图 ============ */
 .word-search { max-width: 380px; margin: 0 auto 18px; }
 .word-search input {
   width: 100%; padding: 8px 16px; border: 1px solid var(--line); border-radius: 20px;
-  background: rgba(255,255,255,0.6); font-family: var(--serif); font-size: 14px;
+  background: var(--sheen); font-family: var(--serif); font-size: 14px;
   letter-spacing: 2px; color: var(--ink); outline: none; text-align: center;
 }
-.word-search input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px rgba(168,50,45,0.12); }
+.word-search input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cinnabar) 12%, transparent); }
 .char-cloud {
   display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; align-items: baseline;
   max-width: 860px; margin: 0 auto 26px; padding-bottom: 22px; border-bottom: 1px solid var(--line);
@@ -392,12 +408,12 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .word-list { max-width: 720px; margin: 0 auto; }
 .word-row {
   cursor: pointer; padding: 9px 14px; border-left: 3px solid var(--line);
-  margin-bottom: 5px; background: linear-gradient(160deg,#fbf7ec,#f1e9d7); border-radius: 0 6px 6px 0;
+  margin-bottom: 5px; background: linear-gradient(160deg,var(--paper-hi), var(--paper-lo)); border-radius: 0 6px 6px 0;
   transition: border-color .15s, transform .15s, box-shadow .15s;
 }
 .word-row:hover { border-left-color: var(--cinnabar); transform: translateX(4px); box-shadow: 0 4px 12px var(--shadow); }
 .wr-line { font-size: 15px; letter-spacing: 1.5px; color: var(--ink); line-height: 1.75; }
-.wr-line mark { background: rgba(168,50,45,0.16); color: var(--cinnabar); padding: 0 2px; border-radius: 2px; font-weight: 700; }
+.wr-line mark { background: color-mix(in srgb, var(--cinnabar) 16%, transparent); color: var(--cinnabar); padding: 0 2px; border-radius: 2px; font-weight: 700; }
 .wr-meta { font-size: 11px; color: var(--ink-soft); letter-spacing: 1px; margin-top: 3px; }
 .wr-meta span { color: var(--jade); margin-left: 6px; }
 
@@ -430,7 +446,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 }
 .author-seal {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: 5px; background: var(--cinnabar); color: #fbeee0;
+  width: 44px; height: 44px; border-radius: 5px; background: var(--cinnabar); color: var(--seal-ink);
   font-size: 25px; letter-spacing: 0; box-shadow: 0 3px 10px var(--shadow); margin-bottom: 10px;
 }
 .author-name { margin: 0; font-size: 25px; letter-spacing: 5px; color: var(--ink); }
@@ -438,7 +454,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .author-meta b { color: var(--cinnabar); font-size: 14px; }
 .author-meta em { font-style: normal; color: var(--jade); }
 .author-meta .ap-dyn {
-  display: inline-block; background: var(--cinnabar); color: #fbeee0;
+  display: inline-block; background: var(--cinnabar); color: var(--seal-ink);
   padding: 1px 9px; border-radius: 3px; font-size: 11.5px; letter-spacing: 2px; margin-right: 4px;
 }
 .ap-block { text-align: center; margin: 0 auto 14px; max-width: 780px; }
@@ -446,10 +462,10 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .ap-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .ap-place {
   cursor: pointer; font-size: 12px; letter-spacing: 1px; padding: 3px 10px;
-  border: 1px solid var(--line); border-radius: 14px; background: rgba(74,107,90,0.08); color: var(--jade);
+  border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--jade) 8%, transparent); color: var(--jade);
   transition: all .15s;
 }
-.ap-place:hover { background: var(--jade); color: #fff; border-color: var(--jade); }
+.ap-place:hover { background: var(--jade); color: var(--on-accent); border-color: var(--jade); }
 .ap-works-h {
   text-align: center; font-size: 13px; letter-spacing: 5px; color: var(--cinnabar);
   margin: 20px 0 4px; padding-top: 14px; border-top: 1px solid var(--line);
@@ -481,15 +497,15 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   min-width: 80px; text-align: right; padding-right: 8px;
 }
 .facet-group .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
-.facet-group .chip.active i { color: rgba(255,255,255,0.75); }
+.facet-group .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
 .filters .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
-.filters .chip.active i { color: rgba(255,255,255,0.75); }
+.filters .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
 
 /* ============ 时间轴 ============ */
 .tl-bands { display: flex; flex-direction: column; gap: 8px; max-width: 780px; margin: 0 auto; }
 .tl-band {
   border: 1px solid var(--line); border-radius: 7px; padding: 11px 14px 9px;
-  background: linear-gradient(160deg, #fbf7ec, #f1e9d7); cursor: pointer;
+  background: linear-gradient(160deg, var(--paper-hi), var(--paper-lo)); cursor: pointer;
   transition: border-color .16s, box-shadow .16s, transform .16s;
 }
 .tl-band:hover { border-color: var(--cinnabar-soft); box-shadow: 0 5px 14px var(--shadow); transform: translateX(3px); }
@@ -510,14 +526,14 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 /* ============ 地图 ============ */
 #mapCanvas {
   height: 560px; border-radius: 10px; overflow: hidden;
-  border: 1px solid var(--line); box-shadow: inset 0 0 30px rgba(60,45,20,0.08);
-  background: #dfe6e2;
+  border: 1px solid var(--line); box-shadow: inset 0 0 30px var(--shadow-soft);
+  background: var(--map-bg);
 }
 .map-pin {
-  background: #a8322d; color: #fff; border-radius: 50%; width: 26px; height: 26px;
+  background: var(--cinnabar); color: var(--on-accent); border-radius: 50%; width: 26px; height: 26px;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--serif); font-size: 13px;
-  border: 2px solid #f4efe4; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  border: 2px solid var(--paper); box-shadow: 0 1px 4px var(--shadow-deep);
 }
 
 /* 详情浮层补充 */
@@ -583,4 +599,62 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   /* 窄屏竖排会把诗挤成很高一条，改回横排 */
   .daily-text.vertical { writing-mode: horizontal-tb; max-height: none; }
   .daily-text.vertical p { font-size: 17px; letter-spacing: 3px; line-height: 2.3; }
+}
+
+/* ============ 中 / EN ============ */
+/* 存在感要小：需要的人找得到，不需要的人看不见。 */
+.lang-toggle {
+  font-family: var(--serif-en); font-size: 11px; letter-spacing: 1.5px;
+  background: none; border: 1px solid var(--line); border-radius: 12px;
+  color: var(--gold); padding: 2px 9px; cursor: pointer; margin-left: 10px;
+  transition: color .16s, border-color .16s;
+}
+.lang-toggle:hover { color: var(--cinnabar); border-color: var(--cinnabar-soft); }
+
+/* ============ 配画投稿 ============ */
+.pd-suggest { text-align: center; margin-top: 18px; padding-top: 14px;
+              border-top: 1px solid var(--line); }
+.pd-suggest a {
+  font-size: 11.5px; letter-spacing: 2px; color: var(--gold);
+  text-decoration: none; border-bottom: 1px dotted var(--line);
+}
+.pd-suggest a:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
+.suggest-art { text-decoration: none; }
+a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
+
+/* ============ 地图：时间滑块 ============ */
+/* 直方图 + 滑块。空档也占一格 —— 中间那几百年的空白本身就是话。 */
+.map-time { max-width: 760px; margin: 16px auto 0; }
+.mt-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.mt-all {
+  font-family: var(--serif); font-size: 11.5px; letter-spacing: 2px; cursor: pointer;
+  padding: 3px 12px; border: 1px solid var(--line); border-radius: 13px;
+  background: var(--sheen); color: var(--ink-soft); transition: all .16s;
+}
+.mt-all:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); }
+.mt-all.active { background: var(--jade); border-color: var(--jade); color: var(--on-accent); }
+.mt-label { font-size: 12px; letter-spacing: 1px; color: var(--ink-soft); }
+.mt-label b { color: var(--cinnabar); font-weight: 400; }
+
+.mt-hist { display: flex; align-items: flex-end; gap: 1px; height: 36px; }
+.mt-bar {
+  flex: 1; min-width: 1px; border: none; padding: 0; cursor: pointer;
+  background: var(--cinnabar); opacity: .38; border-radius: 1px 1px 0 0;
+  transition: opacity .14s;
+}
+.mt-bar:hover { opacity: .85; }
+.mt-bar.zero { background: var(--line); opacity: .5; }
+.mt-bar.on { opacity: 1; }
+.mt-bar.zero.on { background: var(--cinnabar-soft); opacity: .7; }
+
+.mt-range { width: 100%; margin: 6px 0 2px; accent-color: var(--cinnabar); cursor: pointer; }
+.mt-ends {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 10.5px; letter-spacing: 1px; color: var(--gold);
+}
+.mt-hint { font-size: 10px; letter-spacing: 1.5px; opacity: .8; }
+
+@media (max-width: 640px) {
+  .mt-hint { display: none; }
+  .map-time { padding: 0 4px; }
 }

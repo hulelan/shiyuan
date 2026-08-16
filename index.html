@@ -9,6 +9,16 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/palettes.css">
+  <!-- 试色板用。放在 head 里同步执行，避免先闪一下默认色再换。
+       没选过就是默认的朱砂纸本；选定哪一套之后，把它写进 style.css 的
+       :root，这个文件和这段脚本就可以一起删掉。见 palettes.html。 -->
+  <script>
+    try {
+      var _p = localStorage.getItem("palette");
+      if (_p) document.documentElement.setAttribute("data-palette", _p);
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <!-- cross-site tab strip -->
@@ -37,6 +47,8 @@
     <div class="searchbox">
       <input type="search" id="search" placeholder="搜索标题或作者…" autocomplete="off">
     </div>
+    <!-- 只换界面语言，诗文不译。字号压到最小，不跟导航抢位置。 -->
+    <button class="lang-toggle" id="langToggle" title="Read the interface in English">EN</button>
   </header>
 
   <main id="main">
@@ -62,6 +74,7 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
 </body>

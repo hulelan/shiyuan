@@ -26,7 +26,7 @@
 /* ---- row 1: works ---- */
 .tabrow-works {
   height: 36px;
-  background: linear-gradient(180deg, #262320, #1b1916);
+  background: linear-gradient(180deg, var(--chrome-hi, #262320), var(--chrome-lo, #1b1916));
   border-bottom: 1px solid rgba(0,0,0,0.5);
   box-shadow: 0 1px 6px rgba(0,0,0,0.25);
 }
@@ -35,7 +35,7 @@
   padding: 0 18px; margin-top: 5px;
   font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
   font-size: 14px; letter-spacing: 2px;
-  color: #b7ab97; text-decoration: none;
+  color: var(--chrome-ink, #b7ab97); text-decoration: none;
   border-radius: 8px 8px 0 0; white-space: nowrap;
   transition: background .18s, color .18s;
 }
@@ -43,22 +43,22 @@
   content: ""; width: 8px; height: 8px; border-radius: 50%;
   background: currentColor; opacity: .55;
 }
-.tabrow-works .tabstrip-tab:hover { color: #efe7d5; background: rgba(255,255,255,0.05); }
-.tabrow-works .tabstrip-tab.active { color: #1b1916; background: var(--paper, #f4efe4); }
+.tabrow-works .tabstrip-tab:hover { color: var(--chrome-ink-hi, #efe7d5); background: rgba(255,255,255,0.05); }
+.tabrow-works .tabstrip-tab.active { color: var(--chrome-lo, #1b1916); background: var(--paper, #f4efe4); }
 .tabrow-works .tabstrip-tab.active::before { background: var(--cinnabar, #a8322d); opacity: 1; }
 
 /* ---- row 2: views of the current painting ---- */
 .tabrow-views {
   height: 30px;
-  background: linear-gradient(180deg, #f4efe4, #e7ddc7);
-  border-bottom: 1px solid #cdbfa0;
+  background: linear-gradient(180deg, var(--paper, #f4efe4), var(--paper-2, #e7ddc7));
+  border-bottom: 1px solid var(--line, #cdbfa0);
 }
 .tabrow-views .tabstrip-tab {
   display: flex; align-items: center;
   padding: 0 15px;
   font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
   font-size: 13px; letter-spacing: 3px;
-  color: #6b6152; text-decoration: none; white-space: nowrap;
+  color: var(--ink-soft, #6b6152); text-decoration: none; white-space: nowrap;
   border-bottom: 2px solid transparent;
   transition: color .18s, border-color .18s;
 }
@@ -71,7 +71,7 @@
 .tabrow-views .views-label {
   display: flex; align-items: center;
   padding: 0 10px 0 4px; font-size: 11px; letter-spacing: 2px;
-  color: #9a8f7a; white-space: nowrap;
+  color: var(--gold, #9a8f7a); white-space: nowrap;
 }
 
 /* ---- page offsets ---- */
@@ -86,7 +86,7 @@ body.art-immersive .tabrow-works {
   border-bottom: none; box-shadow: none; backdrop-filter: blur(3px);
 }
 body.art-immersive .tabrow-views {
-  background: rgba(244,239,228,0.90);
+  background: color-mix(in srgb, var(--paper, #f4efe4) 90%, transparent);
   backdrop-filter: blur(3px);
 }
 

@@ -251,9 +251,15 @@ def main():
     w("agg/forms.json", form_meta)
 
     # ---- 地图 ----
+    # y/e 是给地图上那条时间滑块用的：y 是年份，e=1 表示这个年份只是按朝代
+    # 摊出来的占位值。占位的不参与按年筛选 —— 否则一整个朝代会齐刷刷堆在同一档，
+    # 看着像那年突然人人写诗。
     places = [{"id": r["id"], "t": r["title"], "a": r["author"],
                "n": r["place"]["name"], "m": r["place"].get("modern", ""),
-               "lat": r["place"]["lat"], "lng": r["place"]["lng"], "b": body_of[r["id"]]}
+               "lat": r["place"]["lat"], "lng": r["place"]["lng"], "b": body_of[r["id"]],
+               "d": r["dynastyOrder"],
+               "y": (int(r["year"]) if isinstance(r.get("year"), (int, float)) else None),
+               "e": 1 if r.get("yearEstimated") else 0}
               for r in full.values()
               if isinstance(r.get("place"), dict)
               and isinstance(r["place"].get("lat"), (int, float))]
@@ -287,17 +293,21 @@ def main():
         for field in (r["title"], r["author"]):
             s2 = HAN.findall(field or "")
             # 单字也要入索引，否则搜"月"找不到《月夜》—— 只有标题恰好是一个字时才命中
-            for ch in set(s2):
+            # sorted 不是讲究：set 的遍历顺序随 PYTHONHASHSEED 变，
+            # 会一路影响到 inv 的键序、进而影响分片里卡片表的下标。
+            # 结果就是同样的语料重跑一次，十来个 search 分片"变了"却一个字没改。
+            for ch in sorted(set(s2)):
                 single[ch].add(pid)
             for i in range(len(s2) - 1):
                 inv[s2[i] + s2[i + 1]].add(pid)
     # 单字命中面太宽（"之""不"这类），先截断；等做了相关性排序再放开
-    for ch, ids in single.items():
-        inv[ch] |= set(sorted(ids)[:SINGLE_CAP])
+    for ch in sorted(single):
+        inv[ch] |= set(sorted(single[ch])[:SINGLE_CAP])
     # 每个桶自带一张卡片小表，倒排表只存表内下标。
     # 这样一次检索 = 取一两个桶文件，不必再回头去抓 index/ 或 body/ 拼卡片。
     sb = defaultdict(lambda: {"c": [], "g": {}, "_at": {}})
-    for gram, ids in inv.items():
+    for gram in sorted(inv):
+        ids = inv[gram]
         B = sb[bucket(gram, SEARCH_BUCKETS)]
         refs = []
         for pid in sorted(ids):

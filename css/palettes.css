@@ -1,0 +1,89 @@
+/* palettes.css — 备用色板。
+ *
+ * style.css 的 :root 是默认那一套（朱砂纸本）。这里每一条只覆盖颜色，
+ * 不碰字体、不碰版式 —— 换色板换的是气质，不是结构。
+ *
+ * 选择器写成 [data-palette="…"] 而不是 :root[data-palette="…"]，
+ * 因为 palettes.html 要在同一页里并排预览六套：套在 <div> 上也得管用。
+ *
+ * 全站试用：<html data-palette="su">，或在 palettes.html 里点「全站试用」
+ * （存进 localStorage，index.html 开头三行会读它）。
+ */
+
+/* ---- 朱砂纸本（默认，与 style.css 的 :root 相同，这里只是给它一个名字）---- */
+[data-palette="zhusha"] {
+  --ink: #1a1a1a;  --ink-soft: #3d3a35;
+  --paper: #f4efe4; --paper-2: #ece4d3; --paper-hi: #fbf7ec; --paper-lo: #f1e9d7;
+  --cinnabar: #a8322d; --cinnabar-soft: #c65b4e;
+  --jade: #4a6b5a; --gold: #b08d57; --line: #d8ccb4;
+  --on-accent: #fff; --seal-ink: #fbeee0;
+  --sheen: rgba(255,255,255,0.55); --scrim: rgba(30,22,10,0.55);
+  --shadow: rgba(60,45,20,0.14); --shadow-soft: rgba(60,45,20,0.08); --shadow-deep: rgba(0,0,0,0.35);
+  --map-bg: #dfe6e2;
+  --chrome-hi: #262320; --chrome-lo: #1b1916; --chrome-ink: #b7ab97; --chrome-ink-hi: #efe7d5;
+}
+
+/* ---- 素宣 —— 生宣纸，一点墨，一方印。最接近你给的那几张招贴 ---- */
+[data-palette="su"] {
+  --ink: #14120e;  --ink-soft: #5a554a;
+  --paper: #f7f4ed; --paper-2: #efeadf; --paper-hi: #fcfaf5; --paper-lo: #f2eee4;
+  --cinnabar: #9c2b22; --cinnabar-soft: #b8544a;
+  --jade: #5f6b5c; --gold: #9a8f79; --line: #ddd6c7;
+  --on-accent: #fff; --seal-ink: #fbf3e8;
+  --sheen: rgba(255,255,255,0.62); --scrim: rgba(24,20,14,0.50);
+  --shadow: rgba(40,34,22,0.10); --shadow-soft: rgba(40,34,22,0.05); --shadow-deep: rgba(0,0,0,0.28);
+  --map-bg: #e4e6e0;
+  --chrome-hi: #232019; --chrome-lo: #17150f; --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
+}
+
+/* ---- 夜读 —— 深底。同样的排版，晚上看不刺眼 ---- */
+[data-palette="ye"] {
+  --ink: #e8e0cf;  --ink-soft: #a49a86;
+  --paper: #16140f; --paper-2: #1c1a14; --paper-hi: #201d16; --paper-lo: #191710;
+  --cinnabar: #c9584a; --cinnabar-soft: #dd7a68;
+  --jade: #7fa088; --gold: #c2a373; --line: #3a3427;
+  --on-accent: #1a1710; --seal-ink: #1a1710;
+  --sheen: rgba(255,255,255,0.05); --scrim: rgba(0,0,0,0.66);
+  --shadow: rgba(0,0,0,0.50); --shadow-soft: rgba(0,0,0,0.30); --shadow-deep: rgba(0,0,0,0.70);
+  --map-bg: #232a26;
+  --chrome-hi: #201d16; --chrome-lo: #16140f; --chrome-ink: #8d8471; --chrome-ink-hi: #e8e0cf;
+}
+
+/* ---- 青绿 —— 石青石绿，跟隔壁千里江山图那个站是一路 ---- */
+[data-palette="qing"] {
+  --ink: #17201b;  --ink-soft: #45544c;
+  --paper: #eef0e8; --paper-2: #e2e7db; --paper-hi: #f5f7f0; --paper-lo: #e6ebe0;
+  --cinnabar: #a3392c; --cinnabar-soft: #bd5f4f;
+  --jade: #2d6b5e; --gold: #6f8a86; --line: #c9d3c4;
+  --on-accent: #fff; --seal-ink: #f4f7ee;
+  --sheen: rgba(255,255,255,0.58); --scrim: rgba(14,26,22,0.55);
+  --shadow: rgba(30,50,42,0.13); --shadow-soft: rgba(30,50,42,0.07); --shadow-deep: rgba(0,0,0,0.33);
+  --map-bg: #dbe4e6;
+  --chrome-hi: #1f2a25; --chrome-lo: #141d19; --chrome-ink: #9aab9f; --chrome-ink-hi: #e9efe5;
+}
+
+/* ---- 茶褐 —— 旧纸，色都压下去，像一本翻久了的集子 ---- */
+[data-palette="cha"] {
+  --ink: #2a1f12;  --ink-soft: #57462f;
+  --paper: #ece2cd; --paper-2: #e2d5ba; --paper-hi: #f3ecdb; --paper-lo: #e6dac2;
+  --cinnabar: #93392a; --cinnabar-soft: #ae5f47;
+  --jade: #5d6b47; --gold: #9c7b46; --line: #cfbc98;
+  --on-accent: #fdf6e6; --seal-ink: #f6ecd6;
+  --sheen: rgba(255,255,255,0.42); --scrim: rgba(34,24,12,0.56);
+  --shadow: rgba(70,50,22,0.16); --shadow-soft: rgba(70,50,22,0.09); --shadow-deep: rgba(0,0,0,0.36);
+  --map-bg: #ddd8c8;
+  --chrome-hi: #2b241a; --chrome-lo: #1d1810; --chrome-ink: #b6a482; --chrome-ink-hi: #f0e6cf;
+}
+
+/* ---- 青花 —— 白瓷底，靛青作主色。印是蓝的，不是红的 ---- */
+[data-palette="qinghua"] {
+  --ink: #1b1d20;  --ink-soft: #4c5157;
+  --paper: #f4f5f3; --paper-2: #e9ebe9; --paper-hi: #fafbfa; --paper-lo: #eef0ee;
+  --cinnabar: #2b4c7e; --cinnabar-soft: #4a70a8;
+  --jade: #3f6b6b; --gold: #8a8f93; --line: #d7dbd8;
+  --on-accent: #fff; --seal-ink: #f2f6fa;
+  --sheen: rgba(255,255,255,0.66); --scrim: rgba(16,22,30,0.52);
+  --shadow: rgba(30,40,55,0.12); --shadow-soft: rgba(30,40,55,0.06); --shadow-deep: rgba(0,0,0,0.30);
+  --map-bg: #e3e8ea;
+  --chrome-hi: #23282d; --chrome-lo: #171a1e; --chrome-ink: #9aa3ab; --chrome-ink-hi: #eaeff3;
+}

@@ -2,6 +2,9 @@
  *
  * 数据一律经 Store 按需取用（见 js/store.js）；本文件只管路由与呈现。
  * 每篇作品都有自己的地址 #/poem/<id>，可直接分享、可被收录。
+ *
+ * 界面文字一律过 T()（见 js/i18n.js）—— 只译界面，诗文与作者名不译。
+ * 新加界面文案时记得包一层 T()，否则英文界面下会突然冒出一句中文。
  */
 (function () {
   "use strict";
@@ -19,23 +22,52 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
     });
   }
-  function dyn(o) { return Store.dynastyName(o); }
+  function dyn(o) { return T.dyn(Store.dynastyName(o)); }
   function loading(host, msg) {
-    host.innerHTML = '<p class="loading">' + (msg || "取书中…") + '</p>';
+    host.innerHTML = '<p class="loading">' + (msg || T("取书中…")) + '</p>';
   }
   function failed(host, err) {
-    host.innerHTML = '<p class="loadfail">没能取到这部分数据。<br><small>' +
+    host.innerHTML = '<p class="loadfail">' + T("没能取到这部分数据。") + '<br><small>' +
       esc(err && err.message || err) + '</small></p>';
   }
   // 视图切换过程中可能有慢请求回来，用序号作废过期的渲染
   var epoch = 0;
   function guard() { var mine = ++epoch; return function () { return mine === epoch; }; }
 
+  /* ---------- 配画投稿 ----------
+     开一个填好了作品信息的 GitHub issue。作品那几行是预填的（省得来回问
+     "你说的是哪首"），画的信息留空等人填。收到之后走 tools/add_art.py 落地。
+     issue 正文里那行 id 是关键：它就是 assets/art/index.json 里的 poem 字段。 */
+  var REPO = "https://github.com/hulelan/shiyuan";
+  function artIssueUrl(p) {
+    var head = "《" + p.title + "》" + (p.author && p.author !== "佚名" ? " " + p.author : "");
+    var body = [
+      "作品：" + head + "　（" + (p.dynasty || "") + "）",
+      "id：`" + p.id + "`",
+      "链接：" + location.origin + location.pathname + "#/poem/" + p.id,
+      "",
+      "以下请填 —",
+      "",
+      "画名：",
+      "画家：",
+      "画的年代：",
+      "藏处 / 出处：",
+      "图片链接（或直接把图拖进这个 issue）：",
+      "版权状态：公有领域 / 已获授权 / 不确定",
+      "",
+      "为什么是这一幅："
+    ].join("\n");
+    return REPO + "/issues/new?labels=" + encodeURIComponent("配画") +
+      "&title=" + encodeURIComponent("配画：" + head) +
+      "&body=" + encodeURIComponent(body);
+  }
+
   // ---------- 卡片 ----------
   function poemCard(c) {
     var card = el("div", "card");
     card.innerHTML =
-      (c.ap ? '<span class="card-badge" title="已含赏析">赏</span>' : "") +
+      (c.ap ? '<span class="card-badge" title="' + T("已含赏析") + '">' +
+        (T.isEn() ? "✦" : "赏") + '</span>' : "") +
       '<span class="dyn">' + esc(dyn(c.d)) + ' · ' + esc(c.f) + '</span>' +
       '<h3>' + esc(c.t) + '</h3>' +
       '<span class="' + (c.a && c.a !== "佚名" ? "author author-link" : "author") + '">' + esc(c.a) + '</span>' +
@@ -69,23 +101,23 @@
       if (btn) btn.remove();
       var rest = opts.total ? opts.total - shown : list.length - shown;
       if (rest > 0) {
-        btn = el("button", "more-btn", "显示更多（还有 " + rest + " 篇）");
+        btn = el("button", "more-btn", T("显示更多（还有 {n} 篇）", { n: rest }));
         btn.addEventListener("click", function () {
           if (shown < list.length) return draw();
-          btn.textContent = "取书中…";
+          btn.textContent = T("取书中…");
           opts.more(list.length).then(function (next) {
             if (!next || !next.length) { btn.remove(); btn = null; return; }
             list = list.concat(next);
             draw();
-          })["catch"](function () { btn.textContent = "没取到，点此重试"; });
+          })["catch"](function () { btn.textContent = T("没取到，点此重试"); });
         });
         host.appendChild(btn);
       }
-      countEl.textContent = "共 " + (opts.total || list.length) + " 篇";
+      countEl.textContent = T("共 {n} 篇", { n: opts.total || list.length });
     }
     draw();
     host.appendChild(countEl);
-    if (!list.length) host.innerHTML = '<p class="empty">这里还没有作品。</p>';
+    if (!list.length) host.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
   }
 
   // ---------- 首页：一日一篇 ----------
@@ -113,9 +145,16 @@
       var attr = '<div class="daily-attr">' + esc(p.dynasty) + '　' + esc(p.author) +
         '　《' + esc(p.title) + '》</div>';
       var acts = '<div class="daily-acts">' +
-        '<button class="quiet" id="dailyOpen">释　文</button>' +
+        '<button class="quiet" id="dailyOpen">' + T("释　文") + '</button>' +
         '<span class="daily-sep">·</span>' +
-        '<button class="quiet" id="dailyNext">换一篇</button></div>';
+        '<button class="quiet" id="dailyNext">' + T("换一篇") + '</button>' +
+        // 没配画的篇目在这里直接给个投稿口，是最顺手的时机
+        (pic ? "" : '<span class="daily-sep">·</span>' +
+          '<a class="quiet suggest-art" href="' + esc(artIssueUrl(p)) +
+          '" target="_blank" rel="noopener" title="' +
+          T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">' +
+          T("推荐一幅画") + '</a>') +
+        '</div>';
 
       if (pic) {
         var cap = [pic.dynasty, pic.artist].filter(Boolean).join(" ") +
@@ -157,12 +196,12 @@
 
     host.innerHTML = '<div class="filters" id="libFilters"></div><div id="libBody"></div>';
     var f = $("#libFilters");
-    var all = el("button", "chip" + (cur ? "" : " active"), "全部");
+    var all = el("button", "chip" + (cur ? "" : " active"), T("全部"));
     all.addEventListener("click", function () { go("/library"); });
     f.appendChild(all);
     dyns.forEach(function (d) {
       var b = el("button", "chip" + (cur && cur.slug === d.slug ? " active" : ""),
-        esc(d.k) + ' <i>' + d.count + '</i>');
+        esc(T.dyn(d.k)) + ' <i>' + d.count + '</i>');
       b.addEventListener("click", function () { go("/library/" + d.slug); });
       f.appendChild(b);
     });
@@ -195,8 +234,10 @@
     Store.authors().then(function (list) {
       if (!ok()) return;
       host.innerHTML =
-        '<p class="view-intro">一人一生的笔墨，聚在一处看，才见得出脾气。按朝代筛选，或直接搜名字。</p>' +
-        '<div class="author-search"><input type="search" id="authorInput" placeholder="搜索作者，如 李白、苏轼…" autocomplete="off"></div>' +
+        '<p class="view-intro">' +
+          T("一人一生的笔墨，聚在一处看，才见得出脾气。按朝代筛选，或直接搜名字。") + '</p>' +
+        '<div class="author-search"><input type="search" id="authorInput" placeholder="' +
+          T("搜索作者，如 李白、苏轼…") + '" autocomplete="off"></div>' +
         '<div class="filters" id="authorFilters"></div>' +
         '<div class="author-index" id="authorIndex"></div>' +
         '<p class="count" id="authorsCount"></p>';
@@ -207,11 +248,11 @@
       var box = $("#authorFilters");
       var dyns = [];
       list.forEach(function (a) { if (dyns.indexOf(a.dy) < 0) dyns.push(a.dy); });
-      var all = el("button", "chip" + (authorDyn ? "" : " active"), "全部");
+      var all = el("button", "chip" + (authorDyn ? "" : " active"), T("全部"));
       all.addEventListener("click", function () { authorDyn = null; viewAuthors(); });
       box.appendChild(all);
       dyns.forEach(function (k) {
-        var b = el("button", "chip" + (authorDyn === k ? " active" : ""), esc(k));
+        var b = el("button", "chip" + (authorDyn === k ? " active" : ""), esc(T.dyn(k)));
         b.addEventListener("click", function () {
           authorDyn = authorDyn === k ? null : k; viewAuthors();
         });
@@ -229,13 +270,13 @@
           var c = el("div", "au-cell",
             '<span class="au-seal">' + esc(a.n.slice(0, 1)) + '</span>' +
             '<span class="au-name">' + esc(a.n) + '</span>' +
-            '<span class="au-dyn">' + esc(a.dy) + '</span>' +
+            '<span class="au-dyn">' + esc(T.dyn(a.dy)) + '</span>' +
             '<span class="au-n">' + a.c + '</span>');
           c.addEventListener("click", function () { go("/author/" + encodeURIComponent(a.n)); });
           grid.appendChild(c);
         });
-        $("#authorsCount").textContent = "共 " + rows.length + " 位" +
-          (rows.length > 600 ? "（显示前 600，可搜索缩小范围）" : "");
+        $("#authorsCount").textContent = T("共 {n} 位", { n: rows.length }) +
+          (rows.length > 600 ? T("（显示前 600，可搜索缩小范围）") : "");
       }
       paint();
     })["catch"](function (e) { if (ok()) failed(host, e); });
@@ -247,7 +288,7 @@
     loading(host);
     Store.authorWorks(name).then(function (works) {
       if (!ok()) return;
-      if (!works.length) return failed(host, new Error("没有 " + name + " 的作品"));
+      if (!works.length) return failed(host, new Error(T("没有 {name} 的作品", { name: name })));
       var dyns = [], forms = {}, themes = {};
       works.forEach(function (w) {
         var d = dyn(w.d);
@@ -259,23 +300,23 @@
       var topThemes = Object.keys(themes).sort(function (a, b) { return themes[b] - themes[a]; }).slice(0, 8);
 
       host.innerHTML =
-        '<button class="back-link" id="authorBack">‹ 作者索引</button>' +
+        '<button class="back-link" id="authorBack">' + T("‹ 作者索引") + '</button>' +
         '<div class="author-head">' +
           '<div class="author-seal">' + esc(name.slice(0, 1)) + '</div>' +
           '<h1 class="author-name">' + esc(name) + '</h1>' +
           '<div class="author-meta">' +
             '<span class="ap-dyn">' + esc(dyns.join(" · ")) + '</span>' +
-            ' ｜ 共收录 <b>' + works.length + '</b> 篇' +
-            (topForms.length ? ' ｜ 多作 ' + topForms.map(function (f) {
+            ' ｜ ' + T("共收录 <b>{n}</b> 篇", { n: works.length }) +
+            (topForms.length ? ' ｜ ' + T("多作") + ' ' + topForms.map(function (f) {
               return '<em>' + esc(f) + '</em>'; }).join("、") : "") +
           '</div>' +
         '</div>' +
-        (topThemes.length ? '<div class="ap-block"><h4>常写主题</h4><div class="ap-chips">' +
+        (topThemes.length ? '<div class="ap-block"><h4>' + T("常写主题") + '</h4><div class="ap-chips">' +
           topThemes.map(function (t) {
             return '<button class="mini-chip" data-theme="' + esc(t) + '">' + esc(t) +
               '<i>' + themes[t] + '</i></button>';
           }).join("") + '</div></div>' : "") +
-        '<h4 class="ap-works-h">作品</h4><div id="authorWorks"></div>';
+        '<h4 class="ap-works-h">' + T("作品") + '</h4><div id="authorWorks"></div>';
 
       renderCards($("#authorWorks"), works, {});
       $("#authorBack").addEventListener("click", function () { go("/authors"); });
@@ -328,7 +369,7 @@
         });
         if (metas.length > CAP) {
           var t = el("button", "facet-toggle",
-            expanded ? "收起" : "更多主题（共 " + metas.length + " 个）");
+            expanded ? T("收起") : T("更多主题（共 {n} 个）", { n: metas.length }));
           t.addEventListener("click", function () { expanded = !expanded; paintNav(); });
           nav.appendChild(t);
         }
@@ -337,7 +378,7 @@
       var body = $(".facet-body", host);
       var meta = metas.filter(function (m) { return keyOf(m) === current; })[0];
       if (!meta) {
-        body.innerHTML = '<p class="empty">选一项，看归入其下的作品。</p>';
+        body.innerHTML = '<p class="empty">' + T("选一项，看归入其下的作品。") + '</p>';
         return;
       }
       loading(body);
@@ -362,7 +403,7 @@
         });
       },
       function (m) { return m.k; }, function (m) { return m.n; }, function (m) { return m.g; },
-      "从《诗经》的四言，到楚辞、乐府、古体诗，再到唐人格律严整的近体诗，乃至宋词元曲——诗体的演进，就是一部文言文的呼吸史。体裁由每首作品的句式自动归类。",
+      T("从《诗经》的四言，到楚辞、乐府、古体诗，再到唐人格律严整的近体诗，乃至宋词元曲——诗体的演进，就是一部文言文的呼吸史。体裁由每首作品的句式自动归类。"),
       key, function (k) { go("/type/" + k); });
   }
 
@@ -377,8 +418,8 @@
         });
       },
       function (m) { return m.k; }, function (m) { return m.n; }, function () { return ""; },
-      "按主题浏览——爱情、田园、送别、忧国……看古人如何在同一母题下各抒其怀。" +
-      '<br><small class="caveat">主题词由模型逐篇标注，尚无统一词表，长尾较杂。</small>',
+      T("按主题浏览——爱情、田园、送别、忧国……看古人如何在同一母题下各抒其怀。") +
+      '<br><small class="caveat">' + T("主题词由模型逐篇标注，尚无统一词表，长尾较杂。") + '</small>',
       key, function (k) { go("/theme/" + k); });
   }
   function goThemeByName(name) {
@@ -396,10 +437,13 @@
     Store.charSummary().then(function (sum) {
       if (!ok()) return;
       host.innerHTML =
-        '<p class="view-intro">古人炼字，一字千金。这里可循一个字走进无数诗篇——看"月"如何照过千年，"风"如何吹遍江山。' +
-        '<br><small class="caveat">已为最常见的 ' + sum.indexed + ' 个字建立索引（全库共 ' + sum.distinct +
-        ' 个不同字）；每字最多列 ' + sum.maxHits + ' 例，且跨朝代抽样，不是只取最早的几篇。</small></p>' +
-        '<div class="word-search"><input type="search" id="wordInput" placeholder="输入一个字，如 月、风、江…" autocomplete="off"></div>' +
+        '<p class="view-intro">' +
+        T('古人炼字，一字千金。这里可循一个字走进无数诗篇——看"月"如何照过千年，"风"如何吹遍江山。') +
+        '<br><small class="caveat">' +
+        T("已为最常见的 {a} 个字建立索引（全库共 {b} 个不同字）；每字最多列 {c} 例，且跨朝代抽样，不是只取最早的几篇。",
+          { a: sum.indexed, b: sum.distinct, c: sum.maxHits }) + '</small></p>' +
+        '<div class="word-search"><input type="search" id="wordInput" placeholder="' +
+        T("输入一个字，如 月、风、江…") + '" autocomplete="off"></div>' +
         '<div class="char-cloud" id="charCloud"></div><div id="wordResult"></div>';
 
       var input = $("#wordInput");
@@ -414,25 +458,27 @@
       sum.cloud.slice(0, 80).forEach(function (c) {
         var b = el("button", "cloud-char", esc(c.c));
         b.style.fontSize = (13 + Math.round(20 * (c.n - min) / Math.max(1, max - min))) + "px";
-        b.title = c.n + " 篇含此字";
+        b.title = T("{n} 篇", { n: c.n });
         b.addEventListener("click", function () { go("/word/" + encodeURIComponent(c.c)); });
         cloud.appendChild(b);
       });
 
       var out = $("#wordResult");
       if (!term) {
-        out.innerHTML = '<p class="empty">点一个字，看它在诗篇中的身影。</p>';
+        out.innerHTML = '<p class="empty">' + T("点一个字，看它在诗篇中的身影。") + '</p>';
         return;
       }
       loading(out);
       Store.charHits(term).then(function (hit) {
         if (!ok()) return;
         if (!hit) {
-          out.innerHTML = '<p class="empty">"' + esc(term) + '" 不在索引内——它在全库中出现得较少。</p>';
+          out.innerHTML = '<p class="empty">' +
+            T('"{c}" 不在索引内——它在全库中出现得较少。', { c: esc(term) }) + '</p>';
           return;
         }
-        out.innerHTML = '<p class="word-count">"<b>' + esc(term) + '</b>" 现身于 <b>' + hit.n +
-          '</b> 篇' + (hit.shown < hit.n ? '，以下列出其中 ' + hit.shown + ' 例（跨朝代抽样）' : "") + '</p>' +
+        out.innerHTML = '<p class="word-count">' +
+          T('"<b>{c}</b>" 现身于 <b>{n}</b> 篇', { c: esc(term), n: hit.n }) +
+          (hit.shown < hit.n ? T("，以下列出其中 {n} 例（跨朝代抽样）", { n: hit.shown }) : "") + '</p>' +
           '<div class="word-list" id="wordList"></div>';
         var list = $("#wordList");
         hit.h.forEach(function (h) {
@@ -454,8 +500,10 @@
       if (!ok()) return;
       var anyLoose = bands.some(function (b) { return !b.confident; });
       host.innerHTML =
-        '<p class="view-intro">沿着时间之河，看文言文从《诗经》的四言到唐诗的格律、宋词的长短句，如何一路演变。' +
-        (anyLoose ? '<br><small class="caveat">浅色的朝代尚未逐篇断代，只能按朝代整体定位。</small>' : "") +
+        '<p class="view-intro">' +
+        T("沿着时间之河，看文言文从《诗经》的四言到唐诗的格律、宋词的长短句，如何一路演变。") +
+        (anyLoose ? '<br><small class="caveat">' +
+          T("浅色的朝代尚未逐篇断代，只能按朝代整体定位。") + '</small>' : "") +
         '</p><div class="tl-bands" id="tlBands"></div><div id="tlDrill"></div>';
       var wrap = $("#tlBands");
       var peak = 1;
@@ -464,19 +512,19 @@
       bands.forEach(function (b) {
         var band = el("div", "tl-band" + (b.confident ? "" : " vague"));
         band.innerHTML =
-          '<div class="tl-band-head"><b>' + esc(b.k) + '</b><em>' + esc(b.span) + '</em>' +
-          '<i>' + b.c + ' 篇</i></div>';
+          '<div class="tl-band-head"><b>' + esc(T.dyn(b.k)) + '</b><em>' + esc(b.span) + '</em>' +
+          '<i>' + T("{n} 篇", { n: b.c }) + '</i></div>';
         var bars = el("div", "tl-hist");
         if (b.confident && b.hist.length > 1) {
           b.hist.forEach(function (h) {
             var bar = el("button", "tl-bar");
             bar.style.height = Math.max(3, Math.round(46 * h.n / peak)) + "px";
-            bar.title = h.d + " 年代 · " + h.n + " 篇";
+            bar.title = T("{d} 年代 · {n} 篇", { d: T.year(h.d), n: h.n });
             bar.addEventListener("click", function () { go("/library/" + b.slug); });
             bars.appendChild(bar);
           });
         } else {
-          bars.appendChild(el("span", "tl-flat", "尚未逐篇断代"));
+          bars.appendChild(el("span", "tl-flat", T("尚未逐篇断代")));
         }
         band.appendChild(bars);
         band.addEventListener("click", function (e) {
@@ -488,64 +536,160 @@
   }
 
   // ---------- 地图 ----------
-  var map = null, mapDone = false;
+  /* 两种看法并存：
+       全览 —— 不分时间，就是原来那张图，默认；
+       滑块 —— 五十年一档，看诗写在哪儿这件事怎么随时间挪动。
+     滑块只认断得出确年的篇目。按朝代摊出来的占位年份一概不进滑块 ——
+     否则一整个唐朝会齐刷刷堆在同一档上，看着像那五十年里人人写诗。
+     这些篇目在全览里照样在。 */
+  var BUCKET = 50;
+  var map = null, mapLayer = null, mapDone = false;
+
   function viewMap() {
     var host = $("#view-map"), ok = guard();
     if (mapDone) { setTimeout(function () { map && map.invalidateSize(); }, 60); return; }
-    host.innerHTML = '<p class="view-intro">每一首诗都诞生在具体的山川之间。点击标记，看看哪些名篇写于同一片土地。</p>' +
-      '<div id="mapCanvas"></div><p class="map-note" id="mapNote"></p>';
+    host.innerHTML = '<p class="view-intro">' +
+      T("每一首诗都诞生在具体的山川之间。点击标记，看看哪些名篇写于同一片土地。") + '</p>' +
+      '<div id="mapCanvas"></div>' +
+      '<div class="map-time" id="mapTime"></div>' +
+      '<p class="map-note" id="mapNote"></p>';
     if (typeof L === "undefined") {
-      $("#mapCanvas").innerHTML = '<div class="map-fallback">地图组件需要联网加载（Leaflet / OpenStreetMap）。<br>' +
-        '连上网络后刷新页面即可查看诗文的地理分布。<br>其余功能均可离线使用。</div>';
+      $("#mapCanvas").innerHTML = '<div class="map-fallback">' +
+        T("地图组件需要联网加载（Leaflet / OpenStreetMap）。") + '<br>' +
+        T("连上网络后刷新页面即可查看诗文的地理分布。") + '<br>' +
+        T("其余功能均可离线使用。") + '</div>';
       return;
     }
-    $("#mapNote").textContent = "取书中…";
+    $("#mapNote").textContent = T("取书中…");
     Store.places().then(function (places) {
       if (!ok()) return;
       mapDone = true;
       map = L.map("mapCanvas", { scrollWheelZoom: true }).setView([33.5, 112.5], 4);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         { maxZoom: 10, attribution: "© OpenStreetMap" }).addTo(map);
-      var spots = {};
-      places.forEach(function (p) {
-        var k = p.lat + "," + p.lng;
-        (spots[k] = spots[k] || { n: p.n, m: p.m, lat: p.lat, lng: p.lng, ps: [] }).ps.push(p);
-      });
-      Object.keys(spots).forEach(function (k) {
-        var s = spots[k];
-        var icon = L.divIcon({
-          className: "",
-          html: '<div class="map-pin">' + s.ps.length + '</div>',
-          iconSize: [26, 26], iconAnchor: [13, 13]
+      mapLayer = L.layerGroup().addTo(map);
+
+      // ---- 分档 ----
+      var dated = places.filter(function (p) { return p.y != null && !p.e; });
+      var undated = places.length - dated.length;
+      var slots = [], byslot = {}, peak = 1;
+      if (dated.length) {
+        var lo = Infinity, hi = -Infinity;
+        dated.forEach(function (p) {
+          var b = Math.floor(p.y / BUCKET) * BUCKET;
+          (byslot[b] = byslot[b] || []).push(p);
+          if (b < lo) lo = b;
+          if (b > hi) hi = b;
         });
-        var html = '<div class="map-popup"><h4>' + esc(s.n) + '</h4>' +
-          '<div class="mp-meta">' + esc(s.m) + '</div><div style="margin-top:6px">' +
-          s.ps.slice(0, 30).map(function (p) {
-            return '<div><span class="mp-open" data-id="' + esc(p.id) + '">《' + esc(p.t) + '》· ' + esc(p.a) + '</span></div>';
-          }).join("") + '</div></div>';
-        L.marker([s.lat, s.lng], { icon: icon }).addTo(map).bindPopup(html)
-          .on("popupopen", function () {
-            document.querySelectorAll(".mp-open").forEach(function (n) {
-              n.onclick = function () { go("/poem/" + n.getAttribute("data-id")); };
-            });
+        // 空档也留着位置 —— 时间轴要是等距的，中间那几百年的空白本身就是信息
+        for (var y = lo; y <= hi; y += BUCKET) {
+          slots.push(y);
+          peak = Math.max(peak, (byslot[y] || []).length);
+        }
+      }
+
+      function drawPins(list) {
+        mapLayer.clearLayers();
+        var spots = {};
+        list.forEach(function (p) {
+          var k = p.lat + "," + p.lng;
+          (spots[k] = spots[k] || { n: p.n, m: p.m, lat: p.lat, lng: p.lng, ps: [] }).ps.push(p);
+        });
+        Object.keys(spots).forEach(function (k) {
+          var s = spots[k];
+          var icon = L.divIcon({
+            className: "",
+            html: '<div class="map-pin">' + s.ps.length + '</div>',
+            iconSize: [26, 26], iconAnchor: [13, 13]
           });
+          var html = '<div class="map-popup"><h4>' + esc(s.n) + '</h4>' +
+            '<div class="mp-meta">' + esc(s.m) + '</div><div style="margin-top:6px">' +
+            s.ps.slice(0, 30).map(function (p) {
+              return '<div><span class="mp-open" data-id="' + esc(p.id) + '">《' +
+                esc(p.t) + '》· ' + esc(p.a) + '</span></div>';
+            }).join("") + '</div></div>';
+          L.marker([s.lat, s.lng], { icon: icon }).addTo(mapLayer).bindPopup(html)
+            .on("popupopen", function () {
+              document.querySelectorAll(".mp-open").forEach(function (n) {
+                n.onclick = function () { go("/poem/" + n.getAttribute("data-id")); };
+              });
+            });
+        });
+      }
+
+      // ---- 滑块 ----
+      var timeBox = $("#mapTime");
+      if (!slots.length) { timeBox.remove(); drawPins(places); return; }
+
+      timeBox.innerHTML =
+        '<div class="mt-head">' +
+          '<button class="mt-all active" id="mtAll">' + T("全览") + '</button>' +
+          '<span class="mt-label" id="mtLabel"></span>' +
+        '</div>' +
+        '<div class="mt-hist" id="mtHist"></div>' +
+        '<input type="range" class="mt-range" id="mtRange" min="0" max="' +
+          (slots.length - 1) + '" value="0" step="1">' +
+        '<div class="mt-ends"><span>' + esc(T.year(slots[0])) + '</span>' +
+          '<span class="mt-hint">' + T("拖动滑块，每档五十年") + '</span>' +
+          '<span>' + esc(T.year(slots[slots.length - 1] + BUCKET - 1)) + '</span></div>';
+
+      var hist = $("#mtHist", host), range = $("#mtRange", host);
+      var label = $("#mtLabel", host), allBtn = $("#mtAll", host);
+      var bars = [];
+      slots.forEach(function (y, i) {
+        var c = (byslot[y] || []).length;
+        var bar = el("button", "mt-bar" + (c ? "" : " zero"));
+        bar.style.height = Math.max(2, Math.round(34 * c / peak)) + "px";
+        bar.title = T("{a} – {b} 年", { a: T.year(y), b: T.year(y + BUCKET - 1) }) +
+          " · " + (c ? T("此档 {n} 篇", { n: c }) : T("此档无诗"));
+        bar.addEventListener("click", function () { range.value = i; pick(i); });
+        hist.appendChild(bar);
+        bars.push(bar);
       });
-      $("#mapNote").textContent = "标记内数字为该地留存的诗文篇数；共 " + places.length + " 篇有据可考。";
+
+      function markBar(i) {
+        bars.forEach(function (b, j) { b.classList.toggle("on", j === i); });
+      }
+      function pick(i) {
+        var y = slots[i], list = byslot[y] || [];
+        allBtn.classList.remove("active");
+        markBar(i);
+        label.innerHTML = '<b>' + esc(T("{a} – {b} 年",
+          { a: T.year(y), b: T.year(y + BUCKET - 1) })) + '</b> · ' +
+          (list.length ? T("此档 {n} 篇", { n: list.length }) : T("此档无诗"));
+        drawPins(list);
+      }
+      function showAll() {
+        allBtn.classList.add("active");
+        markBar(-1);
+        label.textContent = T("不分时间，{n} 篇", { n: places.length });
+        drawPins(places);
+      }
+      range.addEventListener("input", function () { pick(+this.value); });
+      allBtn.addEventListener("click", showAll);
+      showAll();
+
+      $("#mapNote").innerHTML =
+        T("标记内数字为该地留存的诗文篇数；共 {n} 篇有据可考。", { n: places.length }) +
+        (undated ? '<br><small class="caveat">' +
+          T("另有 {n} 篇只知朝代、不知确年，按年筛选时不计入。", { n: undated }) +
+          '</small>' : "");
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
   // ---------- 检索 ----------
   function viewSearch(q) {
     var host = $("#view-search"), ok = guard();
-    loading(host, "检索中…");
+    loading(host, T("检索中…"));
     Store.search(q).then(function (rows) {
       if (!ok()) return;
-      host.innerHTML = '<p class="view-intro">"<b>' + esc(q) + '</b>" 命中 <b>' + rows.length + '</b> 条' +
-        '<br><small class="caveat">检索范围为标题与作者；正文暂未建索引。</small></p>' +
+      host.innerHTML = '<p class="view-intro">' +
+        T('"<b>{q}</b>" 命中 <b>{n}</b> 条', { q: esc(q), n: rows.length }) +
+        '<br><small class="caveat">' + T("检索范围为标题与作者；正文暂未建索引。") + '</small></p>' +
         '<div id="searchBody"></div>';
       var body = $("#searchBody");
       if (!rows.length) {
-        body.innerHTML = '<p class="empty">没有匹配的标题或作者。</p>';
+        body.innerHTML = '<p class="empty">' + T("没有匹配的标题或作者。") + '</p>';
         return;
       }
       var list = el("div", "word-list");
@@ -557,7 +701,7 @@
         list.appendChild(row);
       });
       body.appendChild(list);
-      if (rows.length > 300) body.appendChild(el("p", "count", "仅显示前 300 条"));
+      if (rows.length > 300) body.appendChild(el("p", "count", T("仅显示前 300 条")));
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
@@ -575,18 +719,18 @@
     $("#closeDetail").addEventListener("click", closeDetail);
 
     Store.poemById(id).then(function (p) {
-      if (!p) throw new Error("未找到 " + id);
+      if (!p) throw new Error(T("未找到 {id}", { id: id }));
       var lines = (p.text || "").split("\n");
       var pys = p.pinyin ? p.pinyin.split("\n") : [];
       var hasPy = pys.length === lines.length;
-      var todo = '<span style="color:var(--gold)">— 待补充 —</span>';
+      var todo = '<span style="color:var(--gold)">' + T("— 待补充 —") + '</span>';
 
-      var sec = section("译　文", p.translation ? esc(p.translation) : todo);
-      sec += section("注　释", (p.notes && p.notes.length)
+      var sec = section(T("译　文"), p.translation ? esc(p.translation) : todo);
+      sec += section(T("注　释"), (p.notes && p.notes.length)
         ? '<ul class="notes-list">' + p.notes.map(function (n) {
             return '<li><span class="term">' + esc(n.term) + '</span>' + esc(n.explain) + '</li>';
           }).join("") + '</ul>' : todo);
-      sec += section("赏　析", p.appreciation ? esc(p.appreciation) : todo);
+      sec += section(T("赏　析"), p.appreciation ? esc(p.appreciation) : todo);
       sec += section("English", p.english
         ? esc(p.english).replace(/\n/g, "<br>") +
           (p.englishBy ? '<div class="en-by">— ' + esc(p.englishBy) + '</div>' : "")
@@ -599,7 +743,7 @@
             (p.author && p.author !== "佚名"
               ? '<span class="pd-author-link" id="pdAuthor">' + esc(p.author) + '</span>'
               : esc(p.author)) +
-            '<span class="seal">' + esc(p.dynasty) + '</span>' +
+            '<span class="seal">' + esc(T.dyn(p.dynasty)) + '</span>' +
             (p.form ? '<span class="seal jade">' + esc(p.form) + '</span>' : "") +
           '</div>' +
           (p.yearLabel ? '<div class="pd-meta pd-year">' + esc(p.yearLabel) + '</div>' : "") +
@@ -612,10 +756,16 @@
               '</span><span class="zh">' + esc(ln) + '</span></div>';
           }).join("") +
         '</div>' +
-        (hasPy ? '<button class="pinyin-toggle" id="pyToggle">隐藏拼音</button>' : "") +
-        (p.enrichedBy ? '<div class="ai-note">✦ 译文 / 注释 / 赏析 / 英译 由 AI（' +
-          esc(p.enrichedBy) + '）生成，待校订</div>' : "") +
-        '<div class="pd-sections">' + sec + '</div>';
+        (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' + T("隐藏拼音") + '</button>' : "") +
+        (p.enrichedBy ? '<div class="ai-note">' +
+          T("✦ 译文 / 注释 / 赏析 / 英译 由 AI（{by}）生成，待校订", { by: esc(p.enrichedBy) }) +
+          '</div>' : "") +
+        '<div class="pd-sections">' + sec + '</div>' +
+        // 投稿口放在最下面：读完一篇，才谈得上想给它配什么画
+        '<div class="pd-suggest"><a href="' + esc(artIssueUrl(p)) +
+          '" target="_blank" rel="noopener" title="' +
+          T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">✎ ' +
+          T("推荐一幅画") + '</a></div>';
 
       var secs = d.querySelectorAll(".pd-sec");
       if (secs[0]) secs[0].classList.add("open");
@@ -627,11 +777,11 @@
       if (a) a.addEventListener("click", function () { go("/author/" + encodeURIComponent(p.author)); });
       if (hasPy) $("#pyToggle").addEventListener("click", function () {
         var hidden = $("#pdPoem").classList.toggle("no-pinyin");
-        this.textContent = hidden ? "显示拼音" : "隐藏拼音";
+        this.textContent = hidden ? T("显示拼音") : T("隐藏拼音");
       });
     })["catch"](function (e) {
       d.innerHTML = '<button class="close-btn" id="closeDetail">×</button>' +
-        '<p class="loadfail">没能取到这首作品。<br><small>' + esc(e.message) + '</small></p>';
+        '<p class="loadfail">' + T("没能取到这首作品。") + '<br><small>' + esc(e.message) + '</small></p>';
       $("#closeDetail").addEventListener("click", closeDetail);
     });
   }
@@ -687,6 +837,32 @@
     }
   }
 
+  // ---------- 中 / EN ----------
+  /* 只换界面。诗文、作者名、体裁名、主题词都不动 —— 那些是内容。
+     切换后重走一遍 route()：所有视图都是现渲染的，不必刷新页面。 */
+  var TAB_LABEL = {
+    home: "首页", library: "诗文库", authors: "作者", type: "体裁",
+    theme: "主题", word: "字词", timeline: "时间轴", map: "地图"
+  };
+  function applyChrome() {
+    document.querySelectorAll("#viewTabs button").forEach(function (b) {
+      var k = b.getAttribute("data-view");
+      if (TAB_LABEL[k]) b.textContent = T(TAB_LABEL[k]);
+    });
+    var box = $("#search");
+    if (box) box.setAttribute("placeholder", T("搜索标题或作者…"));
+    var foot = $(".site-footer");
+    if (foot) foot.textContent = T("文本仅供学习研究之用");
+    var stat = $("#bootStat"), m = Store.manifest();
+    if (stat) stat.textContent = m ? T("收录 {n} 篇", { n: m.total })
+                                   : T("古诗古文 · 溯源");
+    var lt = $("#langToggle");
+    if (lt) {
+      lt.textContent = T.isEn() ? "中文" : "EN";
+      lt.setAttribute("title", T.isEn() ? "切换为中文" : "Read the interface in English");
+    }
+  }
+
   // ---------- init ----------
   function init() {
     document.querySelectorAll("#viewTabs button").forEach(function (b) {
@@ -694,6 +870,15 @@
         var v = b.getAttribute("data-view");
         go(v === "home" ? "/" : "/" + v);
       });
+    });
+
+    var lt = $("#langToggle");
+    if (lt) lt.addEventListener("click", function () {
+      T.set(T.isEn() ? "zh" : "en");
+      mapDone = false;              // 地图是一次性搭起来的，换语言要重搭
+      themeMetaCache = null;
+      applyChrome();
+      route();
     });
     var brand = $(".brand");
     if (brand) brand.addEventListener("click", function () { go("/"); });
@@ -711,11 +896,12 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDetail(); });
     window.addEventListener("hashchange", route);
 
+    applyChrome();
     Store.boot().then(function (m) {
-      $("#bootStat").textContent = "收录 " + m.total + " 篇";
+      applyChrome();
       route();
     })["catch"](function (e) {
-      $("#main").innerHTML = '<p class="loadfail">数据没能载入。<br><small>' +
+      $("#main").innerHTML = '<p class="loadfail">' + T("数据没能载入。") + '<br><small>' +
         esc(e.message) + '</small><br><small>若是本地打开的文件，请改用 http 方式访问' +
         '（在项目目录执行 python3 -m http.server）。</small></p>';
     });
