@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>诗渊 · 诗画 mood board demo</title>
+  <link rel="stylesheet" href="css/shell.css">
+  <style>
+    :root {
+      --ink: #1c1a16; --ink-soft: #6b6458; --paper: #f7f5f0; --line: #e0dbd2;
+      --cinnabar: #a83f32; --gold: #a89880;
+    }
+    html, body { background: var(--paper); color: var(--ink); margin: 0; font-family: "Songti SC", "STSong", serif; }
+    .page { padding: 36px 0 60px; }
+    .intro { text-align: center; color: var(--ink-soft); font-size: 12px; letter-spacing: 2px; margin: 24px 0 28px; }
+
+    .board {
+      column-count: 3; column-gap: 18px;
+      max-width: 1100px; margin: 0 auto; padding: 0 18px;
+    }
+    @media (max-width: 860px) { .board { column-count: 2; } }
+    @media (max-width: 520px) { .board { column-count: 1; } }
+
+    .card {
+      display: inline-block; width: 100%;
+      margin-bottom: 22px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      break-inside: avoid;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(30,25,15,.12); }
+    .card-img {
+      width: 100%; aspect-ratio: 4 / 3;
+      background-size: cover; background-position: center;
+    }
+    .card-body { padding: 16px 18px 18px; }
+    .card-body h3 { margin: 0 0 5px; font-size: 16px; letter-spacing: 1.5px; color: var(--cinnabar); }
+    .card-body .au { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-bottom: 10px; }
+    .card-body p { margin: 0; font-size: 13px; line-height: 1.9; color: var(--ink-soft); }
+
+    .demo-note {
+      position: fixed; bottom: 12px; right: 14px;
+      background: #fff; border: 1px solid var(--line);
+      padding: 8px 12px; font-size: 11px; letter-spacing: 1px;
+      color: var(--ink-soft); z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabstrip">
+    <div class="tabrow tabrow-works">
+      <a class="tabstrip-tab active" href="demo-moodboard.html">诗渊</a>
+      <a class="tabstrip-tab" href="https://classicalchinesepainting.com/">千里江山图</a>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="intro">诗画 mood board · 像 Are.na 那样 browsing</div>
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="demo-note">demo：Are.na 式诗画 mood board</div>
+
+  <script>
+    var items = [
+      {t:"春晓", a:"孟浩然", x:"春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。", bg:"linear-gradient(160deg,#e8e4dc,#d4cfc3)", cap:"素纸"},
+      {t:"题西林壁", a:"苏轼", x:"横看成岭侧成峰，远近高低各不同。不识庐山真面目，只缘身在此山中。", img:"assets/art/e025a1267aa1.jpg"},
+      {t:"江雪", a:"柳宗元", x:"千山鸟飞绝，万径人踪灭。孤舟蓑笠翁，独钓寒江雪。", bg:"linear-gradient(180deg,#cfd6d8 0%,#8a9ba0 100%)", cap:"寒江"},
+      {t:"晓出净慈寺送林子方", a:"杨万里", x:"毕竟西湖六月中，风光不与四时同。接天莲叶无穷碧，映日荷花别样红。", bg:"linear-gradient(160deg,#e8dfe8,#c9b8c9)", cap:"暮色荷池"},
+      {t:"望庐山瀑布", a:"李白", x:"日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。", bg:"linear-gradient(180deg,#d4e4e0,#4a6b5a)", cap:"青绿"},
+      {t:"静夜思", a:"李白", x:"床前明月光，疑是地上霜。举头望明月，低头思故乡。", bg:"linear-gradient(160deg,#e4e2dd,#b8b4a8)", cap:"夜月"},
+      {t:"枫桥夜泊", a:"张继", x:"月落乌啼霜满天，江枫渔火对愁眠。姑苏城外寒山寺，夜半钟声到客船。", bg:"linear-gradient(180deg,#d8d4c8,#6b6a5e)", cap:"秋夜"},
+      {t:"相思", a:"王维", x:"红豆生南国，春来发几枝。愿君多采撷，此物最相思。", bg:"linear-gradient(160deg,#f0e6e2,#d9c3bb)", cap:"红豆"}
+    ];
+    var board = document.getElementById('board');
+    items.forEach(function(it){
+      var imgStyle = it.img ? "background-image:url('" + it.img + "')" : "background:" + it.bg;
+      var cap = it.cap ? '<div style="font-size:10px;color:#fff;position:absolute;bottom:10px;left:12px;text-shadow:0 1px 3px rgba(0,0,0,.4)">' + it.cap + '</div>' : '';
+      var card = document.createElement('div'); card.className = 'card';
+      card.innerHTML =
+        '<div class="card-img" style="' + imgStyle + ';position:relative">' + cap + '</div>' +
+        '<div class="card-body"><h3>' + it.t + '</h3><div class="au">' + it.a + '</div><p>' + it.x + '</p></div>';
+      board.appendChild(card);
+    });
+  </script>
+</body>
+</html>

@@ -31,7 +31,10 @@ RAW = "https://raw.githubusercontent.com/chinese-poetry/chinese-poetry/master"
 SOURCES = [
     {"path": "诗经/shijing.json",       "dynasty": "先秦", "order": 1, "year": -700, "genre": "诗", "form": "诗经", "key": "content",    "trad": False, "limit": None},
     {"path": "楚辞/chuci.json",         "dynasty": "先秦", "order": 1, "year": -300, "genre": "诗", "form": "楚辞", "key": "content",    "trad": False, "limit": None},
+    # 全唐诗前 2000 首：0.json 含大量乐府名篇（将进酒、行路难等），1000.json 承接其下
+    {"path": "全唐诗/poet.tang.0.json",     "dynasty": "唐",  "order": 6, "year": 750,  "genre": "诗", "form": "",     "key": "paragraphs", "trad": True,  "limit": None},
     {"path": "全唐诗/poet.tang.1000.json", "dynasty": "唐",  "order": 6, "year": 750,  "genre": "诗", "form": "",     "key": "paragraphs", "trad": True,  "limit": 800},
+    {"path": "全唐诗/唐诗三百首.json",      "dynasty": "唐",  "order": 6, "year": 750,  "genre": "诗", "form": "",     "key": "paragraphs", "trad": True,  "limit": None},
     {"path": "宋词/ci.song.0.json",      "dynasty": "宋",  "order": 8, "year": 1100, "genre": "词", "form": "词",   "key": "paragraphs", "trad": False, "limit": 500},
     {"path": "元曲/yuanqu.json",         "dynasty": "元",  "order": 9, "year": 1300, "genre": "曲", "form": "曲",   "key": "paragraphs", "trad": False, "limit": 200},
     {"path": "纳兰性德/纳兰性德诗集.json", "dynasty": "清",  "order": 11,"year": 1680, "genre": "词", "form": "",     "key": "para",       "trad": False, "limit": None},

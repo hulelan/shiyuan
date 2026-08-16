@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>诗渊 · 组合实验室</title>
+  <link rel="stylesheet" href="css/shell.css">
+  <style>
+    :root {
+      --ink: #14120e; --ink-soft: #5a554a; --paper: #f7f4ed; --paper-2: #efeadf; --paper-hi: #fcfaf5; --paper-lo: #f2eee4;
+      --cinnabar: #9c2b22; --cinnabar-soft: #b8544a; --jade: #5f6b5c; --gold: #9a8f79; --line: #ddd6c7;
+      --on-accent: #fff; --seal-ink: #fbf3e8;
+      --chrome-hi: #232019; --chrome-lo: #17150f; --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
+    }
+    [data-theme="mumo"] {
+      --ink: #261c24; --ink-soft: #5e4f59; --paper: #f0edf1; --paper-2: #e6e0e6; --paper-hi: #f7f5f7; --paper-lo: #ebe6eb;
+      --cinnabar: #8b3a4a; --cinnabar-soft: #a85a6a; --jade: #5d6b6b; --gold: #9c8796; --line: #d8cfda;
+      --seal-ink: #f7f4f6;
+    }
+    [data-theme="summer"] {
+      --ink: #1f1c16; --ink-soft: #625c52; --paper: #faf6ec; --paper-2: #f3ecd9; --paper-hi: #fdfbf6; --paper-lo: #f5efe0;
+      --cinnabar: #c45c2e; --cinnabar-soft: #d97b54; --jade: #5d7a5d; --gold: #c4a35a; --line: #e6dbbf;
+      --seal-ink: #fdf6e8;
+    }
+    [data-theme="qinglv"] {
+      --ink: #17201b; --ink-soft: #45544c; --paper: #eef0e8; --paper-2: #e2e7db; --paper-hi: #f5f7f0; --paper-lo: #e6ebe0;
+      --cinnabar: #a3392c; --cinnabar-soft: #bd5f4f; --jade: #2d6b5e; --gold: #6f8a86; --line: #c9d3c4;
+      --seal-ink: #f4f7ee;
+    }
+
+    html, body { background: #e8e4dc; color: var(--ink); font-family: "Songti SC", "STSong", serif; margin: 0; }
+    .page { padding-top: 36px; min-height: 100vh; }
+
+    .lab-head { text-align: center; padding: 28px 18px 10px; }
+    .lab-head h1 { font-size: 24px; letter-spacing: 8px; color: var(--cinnabar); margin: 0 0 8px; }
+    .lab-head p { color: var(--ink-soft); font-size: 12.5px; letter-spacing: 1px; margin: 0; }
+
+    /* ---- 控制台 ---- */
+    .controls {
+      max-width: 900px; margin: 0 auto 24px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+      padding: 18px; background: var(--paper-hi); border: 1px solid var(--line);
+    }
+    .control label { display: block; font-size: 11px; color: var(--gold); letter-spacing: 2px; margin-bottom: 6px; }
+    .control select {
+      width: 100%; font-family: var(--serif); font-size: 13px; color: var(--ink);
+      background: var(--paper); border: 1px solid var(--line); padding: 6px 8px;
+    }
+    @media (max-width: 720px) { .controls { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 420px) { .controls { grid-template-columns: 1fr; } }
+
+    .links { text-align: center; margin-bottom: 18px; }
+    .links a {
+      font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+      text-decoration: none; border-bottom: 1px solid var(--line); margin: 0 10px;
+    }
+    .links a:hover { color: var(--cinnabar); border-color: var(--cinnabar); }
+
+    /* ---- 预览舞台 ---- */
+    .stage-wrap {
+      max-width: 1100px; margin: 0 auto 60px; padding: 0 18px;
+    }
+    .stage {
+      min-height: 520px;
+      background: var(--paper);
+      background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+      background-attachment: fixed;
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 46px rgba(40,34,22,.14);
+      position: relative;
+      transition: background .5s, color .5s;
+      overflow: hidden;
+    }
+    .stage-label {
+      position: absolute; top: 10px; left: 12px;
+      font-size: 10px; letter-spacing: 1px; color: var(--gold);
+      z-index: 10;
+    }
+    .stage-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-size: cover; background-position: center;
+      transition: background .5s;
+    }
+
+    /* 通用诗句 */
+    .poem-title { color: var(--cinnabar); font-size: 20px; letter-spacing: 3px; }
+    .poem-au { color: var(--gold); font-size: 12px; letter-spacing: 2px; }
+    .poem-line { color: var(--ink); }
+
+    /* ---- 素笺布局 ---- */
+    .scene-su { display: none; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; position: relative; z-index: 1; }
+    .stage.texture .scene-su { display: flex; }
+    .scene-su .seal {
+      writing-mode: vertical-rl; font-size: 12px; letter-spacing: 6px;
+      color: var(--cinnabar); border: 1px solid var(--cinnabar); padding: 10px 5px; margin-bottom: 36px;
+      opacity: .8;
+    }
+    .scene-su .verse {
+      writing-mode: vertical-rl; text-orientation: upright;
+      max-height: 58vh;
+    }
+    .scene-su .verse p { margin: 0; font-size: 22px; letter-spacing: 6px; line-height: 2.2; }
+    .scene-su .attr { margin-top: 34px; color: var(--gold); font-size: 12px; letter-spacing: 3px; }
+
+    /* ---- 手卷布局（单首） ---- */
+    .scene-scroll { display: none; height: 100%; padding: 40px 0; position: relative; z-index: 1; }
+    .stage.scroll .scene-scroll { display: block; }
+    .mini-scroll {
+      display: flex; align-items: stretch; height: 100%; margin: 0 30px;
+      background: linear-gradient(180deg, #8b5e3c 0, #6f452d 6%, transparent 6%, transparent 94%, #6f452d 94%, #8b5e3c 100%);
+      padding: 14px 0;
+    }
+    .mini-scroll .roller {
+      flex: none; width: 22px;
+      background: linear-gradient(90deg, #5c3a24, #8b5e3c 40%, #a87b56 60%, #5c3a24);
+      border-radius: 11px;
+    }
+    .mini-scroll .paper {
+      flex: 1; overflow-x: auto; overflow-y: hidden; white-space: nowrap;
+      background: color-mix(in srgb, var(--paper) 93%, transparent);
+      direction: rtl; display: flex; align-items: center; justify-content: center; gap: 0;
+      padding: 0 40px;
+    }
+    .mini-scroll .col {
+      direction: ltr; writing-mode: vertical-rl; text-orientation: upright;
+      display: inline-flex; flex-direction: column; align-items: center;
+      height: 75%; padding: 0 34px; border-left: 1px dashed var(--line);
+    }
+    .mini-scroll .col:first-child { border-right: 1px dashed var(--line); }
+    .mini-scroll .col h3 { color: var(--cinnabar); font-size: 18px; letter-spacing: 4px; margin: 0 0 14px; }
+    .mini-scroll .col .au { color: var(--gold); font-size: 11px; letter-spacing: 2px; margin-bottom: 20px; }
+    .mini-scroll .col p { font-size: 17px; letter-spacing: 5px; line-height: 2; margin: 0 6px 0 0; }
+
+    /* ---- 册页布局 ---- */
+    .scene-album { display: none; height: 100%; position: relative; z-index: 1; }
+    .stage.album .scene-album { display: flex; }
+    .album-img {
+      flex: 1.4; min-width: 0; height: 100%;
+      background-size: cover; background-position: center;
+      border-right: 1px solid var(--line); position: relative;
+    }
+    .album-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.06), transparent 12%); }
+    .album-img.none { background: var(--paper-2); }
+    .album-img.none::before {
+      content: "无图"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: var(--line); font-size: 28px; letter-spacing: 8px;
+    }
+    .album-txt {
+      flex: 1; min-width: 260px; height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 30px; writing-mode: vertical-rl; text-orientation: upright;
+      background: var(--paper); position: relative; z-index: 2;
+    }
+    .album-txt h3 { color: var(--cinnabar); font-size: 22px; letter-spacing: 4px; margin: 0 0 18px; }
+    .album-txt .au { color: var(--gold); font-size: 12px; letter-spacing: 2px; margin-bottom: 26px; }
+    .album-txt p { font-size: 18px; letter-spacing: 5px; line-height: 2.1; margin: 0 8px 0 0; }
+
+    /* ---- 卡片布局 ---- */
+    .scene-card { display: none; height: 100%; align-items: center; justify-content: center; padding: 40px 20px; position: relative; z-index: 1; }
+    .stage.card .scene-card { display: flex; }
+    .dcard {
+      width: 320px; background: var(--paper-hi); border: 1px solid var(--line);
+      box-shadow: 0 10px 28px rgba(40,34,22,.12); overflow: hidden;
+    }
+    .dcard-img { height: 180px; background-size: cover; background-position: center; border-bottom: 1px solid var(--line); }
+    .dcard-img.none { background: var(--paper-2); display: flex; align-items: center; justify-content: center; color: var(--line); font-size: 14px; letter-spacing: 4px; }
+    .dcard-body { padding: 16px 18px 18px; }
+    .dcard-body h3 { margin: 0 0 4px; font-size: 17px; color: var(--cinnabar); letter-spacing: 2px; }
+    .dcard-body .au { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-bottom: 10px; }
+    .dcard-body p { margin: 0; font-size: 13px; line-height: 1.9; color: var(--ink-soft); }
+
+    /* ---- 散页布局 ---- */
+    .scene-scatter { display: none; height: 100%; align-items: center; justify-content: center; padding: 40px 20px; position: relative; z-index: 1; }
+    .stage.scatter .scene-scatter { display: flex; }
+    .sheet {
+      width: 340px; min-height: 160px;
+      background: linear-gradient(160deg, var(--paper-hi), var(--paper-lo));
+      border: 1px solid var(--line); padding: 18px;
+      box-shadow: 2px 4px 10px rgba(40,34,22,.12);
+      transform: rotate(-2deg); transition: transform .25s, box-shadow .25s;
+    }
+    .sheet:hover { transform: rotate(0deg) translateY(-8px) scale(1.02); box-shadow: 6px 16px 32px rgba(40,34,22,.18); }
+    .sheet h3 { margin: 0 0 4px; font-size: 18px; color: var(--cinnabar); letter-spacing: 2px; }
+    .sheet .au { font-size: 11px; color: var(--gold); letter-spacing: 1px; margin-bottom: 10px; }
+    .sheet p { margin: 0; font-size: 14px; line-height: 1.9; color: var(--ink-soft); }
+    .sheet .img-strip {
+      height: 90px; background-size: cover; background-position: center;
+      margin: -18px -18px 14px; border-bottom: 1px solid var(--line);
+    }
+    .sheet .img-strip.none { display: none; }
+
+    /* 配图模式 */
+    .painting { background-image: url('assets/art/e025a1267aa1.jpg'); }
+    .wash.su { background: linear-gradient(160deg, #e8e4dc, #c9c4b8); }
+    .wash.mumo { background: linear-gradient(160deg, #e8dfe8, #c9b8c9); }
+    .wash.summer { background: linear-gradient(160deg, #f5ecd6, #e6d3a8); }
+    .wash.qinglv { background: linear-gradient(180deg, #d4e4e0, #4a6b5a); }
+
+    .demo-note {
+      position: fixed; bottom: 12px; right: 14px;
+      background: var(--paper-hi); border: 1px solid var(--line);
+      padding: 8px 12px; font-size: 11px; letter-spacing: 1px;
+      color: var(--ink-soft); z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabstrip">
+    <div class="tabrow tabrow-works">
+      <a class="tabstrip-tab" href="index.html">诗渊</a>
+      <a class="tabstrip-tab" href="https://classicalchinesepainting.com/">千里江山图</a>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="lab-head">
+      <h1>组合实验室</h1>
+      <p>自由组合：布局 × 设色 × 配图。选一个你最喜欢的搭配。</p>
+    </div>
+
+    <div class="links">
+      <a href="design.html">← 返回设计候选投票页</a>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <label>布局</label>
+        <select id="layout"><option value="texture">素笺首页</option><option value="scroll">手卷</option><option value="album">册页对读</option><option value="card">诗画卡片</option><option value="scatter">案头散页</option></select>
+      </div>
+      <div class="control">
+        <label>设色</label>
+        <select id="theme"><option value="su">素宣</option><option value="mumo">暮荷</option><option value="summer">夏昼</option><option value="qinglv">青绿</option></select>
+      </div>
+      <div class="control">
+        <label>配图</label>
+        <select id="image"><option value="none">无图</option><option value="painting">名画（千里江山）</option><option value="wash">意象色块</option></select>
+      </div>
+      <div class="control">
+        <label>诗作</label>
+        <select id="poem"></select>
+      </div>
+    </div>
+
+    <div class="stage-wrap">
+      <div class="stage texture" id="stage" data-theme="su">
+        <div class="stage-bg" id="stageBg"></div>
+        <div class="stage-label">实时预览</div>
+
+        <div class="scene-su">
+          <div class="seal">詩淵</div>
+          <div class="verse" id="suVerse"></div>
+          <div class="attr" id="suAttr"></div>
+        </div>
+
+        <div class="scene-scroll">
+          <div class="mini-scroll">
+            <div class="roller"></div>
+            <div class="paper" id="scrollPaper"><div class="col" id="scrollCol"></div></div>
+            <div class="roller"></div>
+          </div>
+        </div>
+
+        <div class="scene-album">
+          <div class="album-img none" id="albumImg"></div>
+          <div class="album-txt" id="albumTxt"></div>
+        </div>
+
+        <div class="scene-card">
+          <div class="dcard">
+            <div class="dcard-img none" id="cardImg"></div>
+            <div class="dcard-body" id="cardBody"></div>
+          </div>
+        </div>
+
+        <div class="scene-scatter">
+          <div class="sheet" id="scatterSheet">
+            <div class="img-strip none" id="scatterImg"></div>
+            <div id="scatterBody"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-note">demo：布局 × 设色 × 配图 组合实验室</div>
+
+  <script>
+    var POEMS = {
+      chunxiao: {t:"春晓", a:"孟浩然", lines:["春眠不觉晓","处处闻啼鸟","夜来风雨声","花落知多少"]},
+      jingye: {t:"静夜思", a:"李白", lines:["床前明月光","疑是地上霜","举头望明月","低头思故乡"]},
+      xilin: {t:"题西林壁", a:"苏轼", lines:["横看成岭侧成峰","远近高低各不同","不识庐山真面目","只缘身在此山中"]},
+      jiangjinjiu: {t:"将进酒", a:"李白", lines:["君不见黄河之水天上来","奔流到海不复回","君不见高堂明镜悲白发","朝如青丝暮成雪","人生得意须尽欢","莫使金樽空对月","天生我材必有用","千金散尽还复来"]},
+      hechi: {t:"晓出净慈寺送林子方", a:"杨万里", lines:["毕竟西湖六月中","风光不与四时同","接天莲叶无穷碧","映日荷花别样红"]},
+      shuidiao: {t:"水调歌头", a:"苏轼", lines:["明月几时有","把酒问青天","不知天上宫阙","今夕是何年","我欲乘风归去","又恐琼楼玉宇","高处不胜寒"]}
+    };
+
+    var selPoem = document.getElementById('poem');
+    Object.keys(POEMS).forEach(function(k){
+      var p = POEMS[k];
+      var opt = document.createElement('option'); opt.value = k; opt.textContent = p.t + ' · ' + p.a;
+      selPoem.appendChild(opt);
+    });
+
+    function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+    function render(){
+      var layout = document.getElementById('layout').value;
+      var theme = document.getElementById('theme').value;
+      var imgMode = document.getElementById('image').value;
+      var p = POEMS[document.getElementById('poem').value];
+
+      var stage = document.getElementById('stage');
+      stage.className = 'stage ' + layout;
+      stage.setAttribute('data-theme', theme);
+
+      // 舞台背景：只在无独立图片元素的布局（素笺、手卷）下当背景用
+      var stageBg = document.getElementById('stageBg');
+      if (imgMode === 'painting') {
+        stageBg.style.backgroundImage = "url('assets/art/e025a1267aa1.jpg')";
+        stageBg.style.background = "url('assets/art/e025a1267aa1.jpg') center/cover no-repeat";
+      } else if (imgMode === 'wash') {
+        var washGrad = {su:'linear-gradient(160deg,#e8e4dc,#c9c4b8)', mumo:'linear-gradient(160deg,#e8dfe8,#c9b8c9)', summer:'linear-gradient(160deg,#f5ecd6,#e6d3a8)', qinglv:'linear-gradient(180deg,#d4e4e0,#4a6b5a)'}[theme];
+        stageBg.style.background = washGrad;
+      } else {
+        stageBg.style.background = 'transparent';
+      }
+
+      // 配图类
+      var imgClass = 'album-img ';
+      if (imgMode === 'painting') imgClass += 'painting';
+      else if (imgMode === 'wash') imgClass += 'wash ' + theme;
+      else imgClass += 'none';
+
+      // 素笺
+      document.getElementById('suVerse').innerHTML = p.lines.map(function(l){ return '<p>' + esc(l) + '</p>'; }).join('');
+      document.getElementById('suAttr').textContent = '唐　' + p.a + '　《' + p.t + '》';
+
+      // 手卷
+      document.getElementById('scrollCol').innerHTML =
+        '<h3>' + esc(p.t) + '</h3><div class="au">' + esc(p.a) + '</div>' +
+        p.lines.map(function(l){ return '<p>' + esc(l) + '</p>'; }).join('');
+
+      // 册页
+      var albumImg = document.getElementById('albumImg'); albumImg.className = imgClass;
+      document.getElementById('albumTxt').innerHTML =
+        '<h3>' + esc(p.t) + '</h3><div class="au">' + esc(p.a) + '</div>' +
+        p.lines.map(function(l){ return '<p>' + esc(l) + '</p>'; }).join('');
+
+      // 卡片
+      var cardImg = document.getElementById('cardImg');
+      if (imgMode === 'none') { cardImg.className = 'dcard-img none'; cardImg.textContent = '无图'; }
+      else { cardImg.className = 'dcard-img ' + (imgMode==='painting'?'painting':'wash '+theme); cardImg.textContent = ''; }
+      var excerpt = p.lines.slice(0, 4).join('，') + (p.lines.length > 4 ? '……' : '');
+      document.getElementById('cardBody').innerHTML =
+        '<h3>' + esc(p.t) + '</h3><div class="au">' + esc(p.a) + '</div><p>' + esc(excerpt) + '</p>';
+
+      // 散页
+      var scatterImg = document.getElementById('scatterImg');
+      scatterImg.className = 'img-strip ' + (imgMode==='none'?'none':(imgMode==='painting'?'painting':'wash '+theme));
+      document.getElementById('scatterBody').innerHTML =
+        '<h3>' + esc(p.t) + '</h3><div class="au">' + esc(p.a) + '</div><p>' + esc(excerpt) + '</p>';
+    }
+
+    ['layout','theme','image','poem'].forEach(function(id){
+      document.getElementById(id).addEventListener('change', render);
+    });
+
+    // 支持 URL 参数直接定位组合
+    var params = new URLSearchParams(location.search);
+    ['layout','theme','image','poem'].forEach(function(id){
+      var v = params.get(id);
+      if (v && document.getElementById(id).querySelector('option[value="' + v + '"]')) {
+        document.getElementById(id).value = v;
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

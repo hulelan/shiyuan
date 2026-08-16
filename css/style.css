@@ -1,30 +1,33 @@
 /* ============================================================
    色板 —— 全站颜色只从这里出。
    下面每一条规则都不许再写死颜色：要一层浅淡，就用
-   color-mix() 从这里的某个色兑出来，这样换色板才是真的换。
-   备用色板见 palettes.html，把 <html data-palette="..."> 一改即可预览。
+   color-mix() 从这里的某个色兑出来。
+   当前为「素宣」：生宣白纸、近黑墨色、灰褐赭金、唯一活色是朱砂印。
    ============================================================ */
 :root {
-  --ink:      #1a1a1a;
-  --ink-soft: #3d3a35;
-  --paper:    #f4efe4;   /* 页面底色 */
-  --paper-2:  #ece4d3;   /* 页眉渐变的深端 */
-  --paper-hi: #fbf7ec;   /* 卡片/浮层的浅面 */
-  --paper-lo: #f1e9d7;   /* 卡片/浮层的深面 */
-  --cinnabar: #a8322d;   /* 朱砂 —— 主色，用得最多 */
-  --cinnabar-soft: #c65b4e;
-  --jade:     #4a6b5a;   /* 青碧 —— 次色：标签、地点、篇数 */
-  --gold:     #b08d57;   /* 赭金 —— 三级信息：年代、拼音、注脚 */
-  --line:     #d8ccb4;   /* 细线 */
+  --ink:      #14120e;
+  --ink-soft: #5a554a;
+  --paper:    #f7f4ed;   /* 页面底色 */
+  --paper-2:  #efeadf;   /* 页眉渐变的深端 */
+  --paper-hi: #fcfaf5;   /* 卡片/浮层的浅面 */
+  --paper-lo: #f2eee4;   /* 卡片/浮层的深面 */
+  --cinnabar: #9c2b22;   /* 朱砂 —— 主色，用得最多 */
+  --cinnabar-soft: #b8544a;
+  --jade:     #5f6b5c;   /* 青碧 —— 次色：标签、地点、篇数 */
+  --gold:     #9a8f79;   /* 赭金 —— 三级信息：年代、拼音、注脚 */
+  --line:     #ddd6c7;   /* 细线 */
 
   --on-accent: #fff;                    /* 压在朱砂/青碧实色上的字 */
-  --seal-ink:  #fbeee0;                 /* 印章里的字，比纯白暖一点 */
-  --sheen:     var(--sheen);  /* 浅色控件的高光底 */
-  --scrim:     var(--scrim);  /* 详情浮层背后的暗幕 */
-  --shadow:      rgba(60, 45, 20, 0.14);
-  --shadow-soft: rgba(60, 45, 20, 0.08);
-  --shadow-deep: rgba(0, 0, 0, 0.35);
-  --map-bg:    #dfe6e2;                 /* 地图无瓦片时的底 */
+  --seal-ink:  #fbf3e8;                 /* 印章里的字，比纯白暖一点 */
+  --sheen:     rgba(255, 255, 255, 0.62);  /* 浅色控件的高光底 */
+  --scrim:     rgba(24, 20, 14, 0.50);     /* 详情浮层背后的暗幕 */
+  --shadow:      rgba(40, 34, 22, 0.10);
+  --shadow-soft: rgba(40, 34, 22, 0.05);
+  --shadow-deep: rgba(0, 0, 0, 0.28);
+  --map-bg:    #e4e6e0;                 /* 地图无瓦片时的底 */
+
+  --chrome-hi: #232019; --chrome-lo: #17150f;
+  --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
 
   --serif:    "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", Georgia, serif;
   --serif-en: Georgia, "Times New Roman", serif;

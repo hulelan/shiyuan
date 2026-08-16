@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>诗渊 · 案头散页 demo</title>
+  <link rel="stylesheet" href="css/shell.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    html, body {
+      background: #ece7de;
+      background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+      background-attachment: fixed;
+    }
+    .desk {
+      max-width: 1100px; margin: 0 auto; padding: 30px 20px 80px;
+      display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+      gap: 8px 18px;
+    }
+    .sheet {
+      width: 210px; min-height: 132px;
+      background:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"),
+        linear-gradient(160deg, #fcfaf5, #f2eee4);
+      border: 1px solid #dcd5c7;
+      border-radius: 1px;
+      padding: 16px 16px 14px;
+      box-shadow: 1px 2px 5px rgba(50,40,25,.12);
+      cursor: pointer;
+      transition: transform .25s, box-shadow .25s, z-index .25s;
+      position: relative;
+    }
+    .sheet:hover {
+      transform: rotate(0deg) translateY(-10px) scale(1.03) !important;
+      box-shadow: 4px 14px 28px rgba(50,40,25,.18);
+      z-index: 10;
+      border-color: var(--cinnabar-soft);
+    }
+    .sheet::before {
+      content: "";
+      position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+      background: var(--cinnabar); opacity: .75;
+    }
+    .sheet .dyn { font-size: 10px; letter-spacing: 1.5px; color: var(--gold); }
+    .sheet h3 { margin: 5px 0 2px; font-size: 17px; letter-spacing: 1.5px; color: var(--ink); }
+    .sheet .au { font-size: 12px; color: var(--ink-soft); letter-spacing: 1px; }
+    .sheet .ex { margin-top: 10px; font-size: 13px; line-height: 1.8; color: var(--ink-soft); }
+    .sheet .tag { margin-top: 10px; font-size: 10px; color: var(--jade); letter-spacing: 1px; }
+
+    .desk-title {
+      width: 100%; text-align: center; margin: 18px 0 12px;
+      color: var(--ink-soft); font-size: 13px; letter-spacing: 4px;
+    }
+    .demo-note {
+      position: fixed; bottom: 12px; right: 14px;
+      background: var(--paper-hi); border: 1px solid var(--line);
+      padding: 8px 12px; font-size: 11px; letter-spacing: 1px;
+      color: var(--ink-soft); z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabstrip">
+    <div class="tabrow tabrow-works">
+      <a class="tabstrip-tab active" href="demo-scatter.html">诗渊</a>
+      <a class="tabstrip-tab" href="https://classicalchinesepainting.com/">千里江山图</a>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="brand"><h1>诗渊</h1><span class="brand-sub">案头散页</span></div>
+    <nav class="tabs" style="margin-left:auto">
+      <button>首页</button><button class="active">诗文库</button><button>作者</button><button>主题</button>
+    </nav>
+    <div class="searchbox"><input type="search" placeholder="搜索标题或作者…"></div>
+  </header>
+
+  <div class="desk" id="desk">
+    <div class="desk-title">— 如摊于案上的诗笺，随手拾起 —</div>
+  </div>
+
+  <div class="demo-note">demo：案头散页式诗文库</div>
+
+  <script>
+    var poems = [
+      {d:"唐", t:"春晓", a:"孟浩然", x:"春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。", tag:"田园"},
+      {d:"唐", t:"静夜思", a:"李白", x:"床前明月光，疑是地上霜。举头望明月，低头思故乡。", tag:"思乡"},
+      {d:"唐", t:"登鹳雀楼", a:"王之涣", x:"白日依山尽，黄河入海流。欲穷千里目，更上一层楼。", tag:"登临"},
+      {d:"唐", t:"相思", a:"王维", x:"红豆生南国，春来发几枝。愿君多采撷，此物最相思。", tag:"爱情"},
+      {d:"唐", t:"江雪", a:"柳宗元", x:"千山鸟飞绝，万径人踪灭。孤舟蓑笠翁，独钓寒江雪。", tag:"隐逸"},
+      {d:"唐", t:"鸟鸣涧", a:"王维", x:"人闲桂花落，夜静春山空。月出惊山鸟，时鸣春涧中。", tag:"山水"},
+      {d:"宋", t:"水调歌头", a:"苏轼", x:"明月几时有？把酒问青天。不知天上宫阙，今夕是何年。", tag:"中秋"},
+      {d:"唐", t:"望庐山瀑布", a:"李白", x:"日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。", tag:"山水"},
+      {d:"唐", t:"早发白帝城", a:"李白", x:"朝辞白帝彩云间，千里江陵一日还。两岸猿声啼不住，轻舟已过万重山。", tag:"行旅"},
+      {d:"唐", t:"枫桥夜泊", a:"张继", x:"月落乌啼霜满天，江枫渔火对愁眠。姑苏城外寒山寺，夜半钟声到客船。", tag:"羁旅"},
+      {d:"宋", t:"题西林壁", a:"苏轼", x:"横看成岭侧成峰，远近高低各不同。不识庐山真面目，只缘身在此山中。", tag:"哲理"},
+      {d:"唐", t:"出塞", a:"王昌龄", x:"秦时明月汉时关，万里长征人未还。但使龙城飞将在，不教胡马度阴山。", tag:"边塞"},
+      {d:"唐", t:"凉州词", a:"王翰", x:"葡萄美酒夜光杯，欲饮琵琶马上催。醉卧沙场君莫笑，古来征战几人回。", tag:"边塞"},
+      {d:"唐", t:"将进酒", a:"李白", x:"君不见黄河之水天上来，奔流到海不复回。君不见高堂明镜悲白发，朝如青丝暮成雪。", tag:"乐府"}
+    ];
+    var desk = document.getElementById('desk');
+    poems.forEach(function(p, i) {
+      var rot = (Math.random() * 5 - 2.5).toFixed(2);
+      var top = (Math.random() * 14 - 7).toFixed(1);
+      var el = document.createElement('div');
+      el.className = 'sheet';
+      el.style.transform = 'rotate(' + rot + 'deg) translateY(' + top + 'px)';
+      el.style.zIndex = i;
+      el.innerHTML = '<div class="dyn">' + p.d + '</div><h3>' + p.t + '</h3>' +
+        '<div class="au">' + p.a + '</div><div class="ex">' + p.x + '</div>' +
+        '<div class="tag">「' + p.tag + '」</div>';
+      desk.appendChild(el);
+    });
+  </script>
+</body>
+</html>
