@@ -33,6 +33,38 @@
   --serif-en: Georgia, "Times New Roman", serif;
 }
 
+/* ---- 可选设色。默认 :root 为素宣；通过 <html data-theme="..."> 切换 ---- */
+[data-theme="mumo"] {
+  --ink: #261c24; --ink-soft: #5e4f59;
+  --paper: #f0edf1; --paper-2: #e6e0e6; --paper-hi: #f7f5f7; --paper-lo: #ebe6eb;
+  --cinnabar: #8b3a4a; --cinnabar-soft: #a85a6a;
+  --jade: #5d6b6b; --gold: #9c8796; --line: #d8cfda;
+  --seal-ink: #f7f4f6;
+  --shadow: rgba(50, 40, 48, 0.10); --shadow-soft: rgba(50, 40, 48, 0.05); --shadow-deep: rgba(0, 0, 0, 0.28);
+  --map-bg: #e4e0e4;
+  --chrome-hi: #232019; --chrome-lo: #17150f; --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
+}
+[data-theme="summer"] {
+  --ink: #1f1c16; --ink-soft: #625c52;
+  --paper: #faf6ec; --paper-2: #f3ecd9; --paper-hi: #fdfbf6; --paper-lo: #f5efe0;
+  --cinnabar: #c45c2e; --cinnabar-soft: #d97b54;
+  --jade: #5d7a5d; --gold: #c4a35a; --line: #e6dbbf;
+  --seal-ink: #fdf6e8;
+  --shadow: rgba(60, 48, 22, 0.10); --shadow-soft: rgba(60, 48, 22, 0.05); --shadow-deep: rgba(0, 0, 0, 0.28);
+  --map-bg: #e8e4d8;
+  --chrome-hi: #232019; --chrome-lo: #17150f; --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
+}
+[data-theme="qinglv"] {
+  --ink: #17201b; --ink-soft: #45544c;
+  --paper: #eef0e8; --paper-2: #e2e7db; --paper-hi: #f5f7f0; --paper-lo: #e6ebe0;
+  --cinnabar: #a3392c; --cinnabar-soft: #bd5f4f;
+  --jade: #2d6b5e; --gold: #6f8a86; --line: #c9d3c4;
+  --seal-ink: #f4f7ee;
+  --shadow: rgba(30, 50, 42, 0.13); --shadow-soft: rgba(30, 50, 42, 0.07); --shadow-deep: rgba(0, 0, 0, 0.33);
+  --map-bg: #dbe4e6;
+  --chrome-hi: #1f2a25; --chrome-lo: #141d19; --chrome-ink: #9aab9f; --chrome-ink-hi: #e9efe5;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -311,16 +343,54 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 
 /* ============ 首页 Home — 一日一篇 ============ */
 /* 首页只有一首诗。留白是内容的一部分：不要往这里加统计、入口或推荐。 */
-#view-home { max-width: 760px; }
+#view-home {
+  max-width: 760px;
+  margin: 0 auto;
+  /* 极淡宣纸噪点，随设色变化 */
+  background:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--gold) 5%, transparent), transparent 40%),
+    radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--jade) 4%, transparent), transparent 42%);
+  background-color: var(--paper);
+  background-attachment: fixed;
+}
+
+/* ---- 设色印章 ---- */
+.home-themes {
+  display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+  margin: 28px 0 34px;
+}
+.home-theme {
+  font-family: var(--serif); font-size: 13px; letter-spacing: 2px;
+  padding: 4px 5px; min-width: 38px; text-align: center;
+  border: 1.5px solid var(--line); color: var(--ink-soft);
+  background: color-mix(in srgb, var(--paper-hi) 80%, transparent);
+  cursor: pointer; transition: all .18s; position: relative;
+  border-radius: 0;
+}
+.home-theme::after {
+  content: ""; position: absolute; inset: 2px;
+  border: 1px dashed color-mix(in srgb, var(--line) 60%, transparent);
+  pointer-events: none;
+}
+.home-theme:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); }
+.home-theme.on {
+  background: var(--cinnabar); color: var(--seal-ink); border-color: var(--cinnabar);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cinnabar-soft) 70%, transparent);
+  transform: rotate(-1deg);
+}
+.home-theme.on::after { display: none; }
+
 .daily {
   min-height: calc(100vh - 250px);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 40px 20px 60px;
 }
 .daily-seal {
-  writing-mode: vertical-rl; font-size: 11px; letter-spacing: 5px;
-  color: var(--cinnabar); border: 1px solid var(--cinnabar); border-radius: 2px;
-  padding: 8px 4px; line-height: 1.2; opacity: .75; margin-bottom: 42px;
+  writing-mode: vertical-rl; font-size: 12px; letter-spacing: 6px;
+  color: var(--cinnabar); border: 1px solid var(--cinnabar);
+  padding: 10px 5px; line-height: 1.2; opacity: .8; margin-bottom: 38px;
+  border-radius: 0;
 }
 .daily-text { cursor: pointer; margin: 0 0 32px; }
 .daily-text p {
@@ -331,9 +401,17 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 /* 散文/长句：左对齐、正常字距、可折行 */
 .daily-text.prose { text-align: left; max-width: 620px; }
 .daily-text.prose p { font-size: 16px; letter-spacing: 1.5px; line-height: 2.2; margin-bottom: 12px; }
+/* 短篇竖排：手卷式 */
+.daily-text.vertical {
+  writing-mode: vertical-rl; text-orientation: upright;
+  max-height: 58vh; margin: 0 auto 24px;
+}
+.daily-text.vertical p {
+  font-size: 22px; letter-spacing: 6px; line-height: 2.2; margin: 0;
+}
 
-.daily-attr { color: var(--gold); font-size: 12px; letter-spacing: 3px; }
-.daily-acts { margin-top: 30px; display: flex; align-items: center; gap: 12px; }
+.daily-attr { margin-top: 34px; color: var(--gold); font-size: 12px; letter-spacing: 3px; }
+.daily-acts { margin-top: 28px; display: flex; align-items: center; gap: 18px; }
 .daily-sep { color: var(--gold); font-size: 10px; opacity: .6; }
 .quiet {
   font-family: var(--serif); background: none; border: none; cursor: pointer;
@@ -427,6 +505,9 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   .daily-seal { margin-bottom: 28px; }
   .daily-text p { font-size: 18px; letter-spacing: 3px; line-height: 2.3; }
   .daily-text.prose p { font-size: 15px; }
+  /* 窄屏竖排会把诗挤成很高一条，改回横排 */
+  .daily-text.vertical { writing-mode: horizontal-tb; max-height: none; }
+  .daily-text.vertical p { font-size: 17px; letter-spacing: 3px; line-height: 2.3; }
   .type-group-label { min-width: 100%; text-align: left; }
   .author-index { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }

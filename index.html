@@ -9,6 +9,13 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/style.css">
+  <!-- 设色：无记录时默认夏昼，避免先闪素宣再切色 -->
+  <script>
+    try {
+      var _t = localStorage.getItem("theme");
+      document.documentElement.setAttribute("data-theme", _t || "summer");
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <!-- cross-site tab strip -->

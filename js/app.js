@@ -122,6 +122,23 @@
 
   // ---------- 首页：一日一篇 ----------
   var homeOffset = 0;
+  var THEMES = [
+    { k: "su", n: "素宣" },
+    { k: "mumo", n: "暮荷" },
+    { k: "summer", n: "夏昼" },
+    { k: "qinglv", n: "青绿" }
+  ];
+  function currentTheme() {
+    try { return localStorage.getItem("theme") || "summer"; } catch (e) { return "summer"; }
+  }
+  function setTheme(name) {
+    try { localStorage.setItem("theme", name); } catch (e) {}
+    document.documentElement.setAttribute("data-theme", name);
+    document.querySelectorAll(".home-theme").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-set") === name);
+    });
+  }
+
   function viewHome() {
     var host = $("#view-home"), ok = guard();
     loading(host);
@@ -137,7 +154,13 @@
 
       // 竖排只用在短篇上：长调竖排会溢出，横排反而稳当
       var chars = (p.text || "").replace(/\s/g, "").length;
-      var vertical = pic && !prose && chars <= 60;
+      var vertical = !prose && chars <= 60;
+
+      var cur = currentTheme();
+      var themeBar = '<div class="home-themes">' + THEMES.map(function (t) {
+        return '<button class="home-theme' + (t.k === cur ? ' on' : '') +
+          '" data-set="' + t.k + '">' + esc(t.n) + '</button>';
+      }).join("") + '</div>';
 
       var verse = '<div class="daily-text' + (prose ? " prose" : "") +
         (vertical ? " vertical" : "") + '" id="dailyText">' +
@@ -156,34 +179,18 @@
           T("推荐一幅画") + '</a>') +
         '</div>';
 
-      if (pic) {
-        var cap = [pic.dynasty, pic.artist].filter(Boolean).join(" ") +
-          (pic.title ? '《' + pic.title + '》' : "");
-        var credit = pic.credit
-          ? (pic.link ? '<a href="' + esc(pic.link) + '" target="_blank" rel="noopener">' +
-              esc(pic.credit) + '</a>' : esc(pic.credit))
-          : "";
-        host.innerHTML =
-          '<div class="daily paired">' +
-            '<figure class="daily-art">' +
-              '<img src="assets/art/' + esc(pic.file) + '" alt="' + esc(cap) + '"' +
-                (pic.w && pic.h ? ' width="' + pic.w + '" height="' + pic.h + '"' : "") + '>' +
-              '<figcaption>' + esc(cap) + (credit ? '<span>' + credit + '</span>' : "") +
-              '</figcaption>' +
-            '</figure>' +
-            '<div class="daily-words">' +
-              '<div class="daily-seal">詩淵</div>' + verse + attr + acts +
-            '</div>' +
-          '</div>';
-      } else {
-        host.innerHTML = '<div class="daily">' +
-          '<div class="daily-seal">詩淵</div>' + verse + attr + acts + '</div>';
-      }
+      host.innerHTML = themeBar +
+        '<div class="daily">' +
+          '<div class="daily-seal">詩淵</div>' + verse + attr + acts +
+        '</div>';
 
       function open() { go("/poem/" + p.id); }
       $("#dailyText").addEventListener("click", open);
       $("#dailyOpen").addEventListener("click", open);
       $("#dailyNext").addEventListener("click", function () { homeOffset++; viewHome(); });
+      document.querySelectorAll(".home-theme").forEach(function (b) {
+        b.addEventListener("click", function () { setTheme(b.getAttribute("data-set")); });
+      });
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
