@@ -120,22 +120,157 @@
     if (!list.length) host.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
   }
 
-  // ---------- 首页：一日一篇 ----------
+  // ---------- 首页：多种观看方式 ----------
   var homeOffset = 0;
-  var THEMES = [
-    { k: "su", n: "素宣" },
-    { k: "mumo", n: "暮荷" },
-    { k: "summer", n: "夏昼" },
-    { k: "qinglv", n: "青绿" }
+  var MODES = [
+    { k: "texture", n: "单篇" },
+    { k: "scroll", n: "长卷" },
+    { k: "album", n: "册页" },
+    { k: "moodboard", n: "Mood board" }
   ];
-  function currentTheme() {
-    try { return localStorage.getItem("theme") || "summer"; } catch (e) { return "summer"; }
+  var GRADIENTS = [
+    "linear-gradient(160deg,#e8e4dc,#d4cfc3)",
+    "linear-gradient(180deg,#cfd6d8,#8a9ba0)",
+    "linear-gradient(160deg,#e8dfe8,#c9b8c9)",
+    "linear-gradient(180deg,#d4e4e0,#4a6b5a)",
+    "linear-gradient(160deg,#e4e2dd,#b8b4a8)",
+    "linear-gradient(180deg,#d8d4c8,#6b6a5e)",
+    "linear-gradient(160deg,#f0e6e2,#d9c3bb)"
+  ];
+  function currentMode() {
+    try { return localStorage.getItem("homeMode") || "texture"; } catch (e) { return "texture"; }
   }
-  function setTheme(name) {
-    try { localStorage.setItem("theme", name); } catch (e) {}
-    document.documentElement.setAttribute("data-theme", name);
-    document.querySelectorAll(".home-theme").forEach(function (b) {
+  function setMode(name) {
+    try { localStorage.setItem("homeMode", name); } catch (e) {}
+    document.querySelectorAll(".home-mode").forEach(function (b) {
       b.classList.toggle("on", b.getAttribute("data-set") === name);
+    });
+  }
+  function modeBar(cur) {
+    return '<div class="home-modes">' + MODES.map(function (m) {
+      return '<button class="home-mode' + (m.k === cur ? ' on' : '') +
+        '" data-set="' + m.k + '">' + esc(m.n) + '</button>';
+    }).join("") + '</div>';
+  }
+
+  function poemLines(p) { return (p.text || "").split("\n"); }
+  function isProse(p) {
+    var lines = poemLines(p);
+    return p.genre === "文" || lines.some(function (l) { return l.length > 22; });
+  }
+  function bgStyle(p, art, i) {
+    if (art) return "background-image:url('assets/art/" + esc(art.file) + "')";
+    return "background:" + GRADIENTS[(i || 0) % GRADIENTS.length];
+  }
+
+  function renderTexture(p, pic) {
+    var lines = poemLines(p);
+    var prose = isProse(p);
+    var chars = (p.text || "").replace(/\s/g, "").length;
+    var vertical = !prose && chars <= 60;
+    var verse = '<div class="daily-text' + (prose ? " prose" : "") +
+      (vertical ? " vertical" : "") + '" id="dailyText">' +
+      lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
+    var attr = '<div class="daily-attr">' + esc(p.dynasty) + '　' + esc(p.author) +
+      '　《' + esc(p.title) + '》</div>';
+    var acts = '<div class="daily-acts">' +
+      '<button class="quiet" id="dailyOpen">' + T("释　文") + '</button>' +
+      '<span class="daily-sep">·</span>' +
+      '<button class="quiet" id="dailyNext">' + T("换一篇") + '</button>' +
+      (pic ? "" : '<span class="daily-sep">·</span>' +
+        '<a class="quiet suggest-art" href="' + esc(artIssueUrl(p)) +
+        '" target="_blank" rel="noopener" title="' +
+        T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">' +
+        T("推荐一幅画") + '</a>') +
+      '</div>';
+    return '<div class="daily"><div class="daily-seal">詩淵</div>' + verse + attr + acts + '</div>';
+  }
+
+  function renderScroll(poems) {
+    var cols = poems.map(function (p) {
+      var lines = poemLines(p).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("");
+      return '<div class="scroll-col" data-id="' + esc(p.id) + '"><h3>' + esc(p.title) +
+        '</h3><div class="au">' + esc(p.author) + '</div>' + lines + '</div>';
+    }).join("");
+    return '<div class="scroll-stage"><div class="scroll-case"><div class="scroll">' +
+      '<div class="roller"></div><div class="scroll-paper" id="homeScroll">' + cols +
+      '</div><div class="roller"></div></div></div><div class="scroll-hint">' +
+      T("长卷 · 竖排 · 横向展开") + '</div></div>';
+  }
+
+  function renderAlbum(poems, artMap) {
+    var leaves = poems.map(function (p, i) {
+      var art = artMap[p.id];
+      var cap = art ? [art.dynasty, art.artist, art.title].filter(Boolean).join(" · ") : "";
+      var img = '<div class="album-img" style="' + bgStyle(p, art, i) + '">' +
+        (cap ? '<div class="album-cap">' + esc(cap) + '</div>' : "") + '</div>';
+      var lines = poemLines(p).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("");
+      var txt = '<div class="album-txt" data-id="' + esc(p.id) + '"><h3>' + esc(p.title) +
+        '</h3><div class="au">' + esc(p.author) + '</div>' + lines + '</div>';
+      return '<div class="album-leaf' + (i === 0 ? " active" : "") +
+        '" data-id="' + esc(p.id) + '">' + img + txt + '</div>';
+    }).join("");
+    var dots = poems.map(function (_, i) {
+      return '<div class="album-dot' + (i === 0 ? " active" : "") +
+        '" data-i="' + i + '"></div>';
+    }).join("");
+    return '<div class="album-stage"><div class="album-intro">' +
+      T("册页式诗画对读 · 左右翻动") + '</div><div class="album" id="homeAlbum">' + leaves +
+      '</div><div class="album-nav"><button id="albumPrev">‹ ' + T("上一页") +
+      '</button><div class="album-dots" id="albumDots">' + dots +
+      '</div><button id="albumNext">' + T("下一页") + ' ›</button></div></div>';
+  }
+
+  function renderMoodboard(poems, artMap) {
+    var cards = poems.map(function (p, i) {
+      var art = artMap[p.id];
+      var cap = art ? [art.dynasty, art.artist].filter(Boolean).join(" · ") : "";
+      var img = '<div class="mood-card-img" style="' + bgStyle(p, art, i) + '">' +
+        (cap ? '<div class="mood-card-cap">' + esc(cap) + '</div>' : "") + '</div>';
+      var excerpt = (p.text || "").replace(/\n/g, " ").slice(0, 60) + ((p.text || "").length > 60 ? "…" : "");
+      return '<div class="mood-card" data-id="' + esc(p.id) + '">' + img +
+        '<div class="mood-card-body"><h3>' + esc(p.title) + '</h3>' +
+        '<div class="au">' + esc(p.author) + '</div><p>' + esc(excerpt) + '</p></div></div>';
+    }).join("");
+    return '<div class="mood-stage"><div class="mood-intro">' +
+      T("诗画 mood board · 随手翻阅") + '</div><div class="mood-board" id="homeMood">' +
+      cards + '</div></div>';
+  }
+
+  function attachTextureEvents(p) {
+    function open() { go("/poem/" + p.id); }
+    $("#dailyText").addEventListener("click", open);
+    $("#dailyOpen").addEventListener("click", open);
+    $("#dailyNext").addEventListener("click", function () { homeOffset++; viewHome(); });
+  }
+  function attachScrollEvents() {
+    var paper = $("#homeScroll");
+    if (paper) paper.scrollLeft = paper.scrollWidth;
+    document.querySelectorAll(".scroll-col").forEach(function (c) {
+      c.addEventListener("click", function () { go("/poem/" + c.getAttribute("data-id")); });
+    });
+  }
+  function attachAlbumEvents() {
+    var leaves = document.querySelectorAll(".album-leaf");
+    var dots = document.querySelectorAll(".album-dot");
+    var cur = 0;
+    function albumGo(i) {
+      cur = (i + leaves.length) % leaves.length;
+      leaves.forEach(function (l, idx) { l.classList.toggle("active", idx === cur); });
+      dots.forEach(function (d, idx) { d.classList.toggle("active", idx === cur); });
+    }
+    $("#albumPrev").addEventListener("click", function () { albumGo(cur - 1); });
+    $("#albumNext").addEventListener("click", function () { albumGo(cur + 1); });
+    dots.forEach(function (d) {
+      d.addEventListener("click", function () { albumGo(+d.getAttribute("data-i")); });
+    });
+    document.querySelectorAll(".album-txt").forEach(function (t) {
+      t.addEventListener("click", function () { go("/poem/" + t.getAttribute("data-id")); });
+    });
+  }
+  function attachMoodboardEvents() {
+    document.querySelectorAll(".mood-card").forEach(function (c) {
+      c.addEventListener("click", function () { go("/poem/" + c.getAttribute("data-id")); });
     });
   }
 
@@ -146,51 +281,32 @@
       if (!ok()) return;
       var pool = res[0], art = res[1] || [];
       if (!pool.length) return failed(host, new Error("精编集为空"));
-      var day = Math.floor(Date.now() / 86400000);
-      var p = pool[(day + homeOffset) % pool.length];
-      var lines = (p.text || "").split("\n");
-      var prose = p.genre === "文" || lines.some(function (l) { return l.length > 22; });
-      var pic = art.filter(function (a) { return a.poem === p.id; })[0];
+      var mode = currentMode();
+      var artMap = {};
+      art.forEach(function (a) { artMap[a.poem] = a; });
 
-      // 竖排只用在短篇上：长调竖排会溢出，横排反而稳当
-      var chars = (p.text || "").replace(/\s/g, "").length;
-      var vertical = !prose && chars <= 60;
+      var bar = modeBar(mode);
+      var body;
+      if (mode === "scroll") body = renderScroll(pool.slice(0, 20));
+      else if (mode === "album") body = renderAlbum(pool.slice(0, 12), artMap);
+      else if (mode === "moodboard") body = renderMoodboard(pool.slice(0, 20), artMap);
+      else {
+        var day = Math.floor(Date.now() / 86400000);
+        var p = pool[(day + homeOffset) % pool.length];
+        body = renderTexture(p, artMap[p.id]);
+      }
 
-      var cur = currentTheme();
-      var themeBar = '<div class="home-themes">' + THEMES.map(function (t) {
-        return '<button class="home-theme' + (t.k === cur ? ' on' : '') +
-          '" data-set="' + t.k + '">' + esc(t.n) + '</button>';
-      }).join("") + '</div>';
+      host.className = "view mode-" + mode;
+      host.innerHTML = bar + body;
 
-      var verse = '<div class="daily-text' + (prose ? " prose" : "") +
-        (vertical ? " vertical" : "") + '" id="dailyText">' +
-        lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
-      var attr = '<div class="daily-attr">' + esc(p.dynasty) + '　' + esc(p.author) +
-        '　《' + esc(p.title) + '》</div>';
-      var acts = '<div class="daily-acts">' +
-        '<button class="quiet" id="dailyOpen">' + T("释　文") + '</button>' +
-        '<span class="daily-sep">·</span>' +
-        '<button class="quiet" id="dailyNext">' + T("换一篇") + '</button>' +
-        // 没配画的篇目在这里直接给个投稿口，是最顺手的时机
-        (pic ? "" : '<span class="daily-sep">·</span>' +
-          '<a class="quiet suggest-art" href="' + esc(artIssueUrl(p)) +
-          '" target="_blank" rel="noopener" title="' +
-          T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">' +
-          T("推荐一幅画") + '</a>') +
-        '</div>';
-
-      host.innerHTML = themeBar +
-        '<div class="daily">' +
-          '<div class="daily-seal">詩淵</div>' + verse + attr + acts +
-        '</div>';
-
-      function open() { go("/poem/" + p.id); }
-      $("#dailyText").addEventListener("click", open);
-      $("#dailyOpen").addEventListener("click", open);
-      $("#dailyNext").addEventListener("click", function () { homeOffset++; viewHome(); });
-      document.querySelectorAll(".home-theme").forEach(function (b) {
-        b.addEventListener("click", function () { setTheme(b.getAttribute("data-set")); });
+      document.querySelectorAll(".home-mode").forEach(function (b) {
+        b.addEventListener("click", function () { setMode(b.getAttribute("data-set")); viewHome(); });
       });
+
+      if (mode === "texture") attachTextureEvents(p);
+      else if (mode === "scroll") attachScrollEvents();
+      else if (mode === "album") attachAlbumEvents();
+      else if (mode === "moodboard") attachMoodboardEvents();
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
