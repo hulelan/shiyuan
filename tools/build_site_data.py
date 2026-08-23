@@ -140,6 +140,21 @@ def main():
             path = os.path.join(SITE, name)
             shutil.rmtree(path) if os.path.isdir(path) else os.remove(path)
 
+    # ---- 按作者估年：给尚未逐篇断代的篇目一个说得过去的位置 ----
+    # 唐有 2142 篇，模型只断出 533 篇，其余全挂在朝代的占位年份上，时间轴
+    # 因此只能画成一条平的。作者的生卒是查得到的常识，不必再跑一遍模型：
+    # 取生年 + 35，即大致的创作壮年。这仍是估计 —— 画的是诗人活在什么时候，
+    # 不是这首诗写于哪一年 —— 所以 yearEstimated 照旧为真，地图的时间滑块
+    # 一如既往不收，只有时间轴愿意用它。
+    AY = {}
+    ayp = os.path.join(CL.DATA, "curated", "author_years.json")
+    if os.path.exists(ayp):
+        for dyn, tab in json.load(open(ayp, encoding="utf-8")).items():
+            if dyn.startswith("_"):
+                continue
+            for name, (b, d) in tab.items():
+                AY[(dyn, name)] = max(b + 15, min(b + 35, d))
+
     # ---- 合成完整记录，顺带算好体裁与生效年份 ----
     full = {}
     for pid, s in src.items():
@@ -154,6 +169,12 @@ def main():
         rec["yearLabel"] = e.get("yearLabel") or s.get("yearLabel") or ""
         rec["formGroup"], rec["formSub"], rec["formLabel"] = group, sub, label
         rec["yearEstimated"] = estimated
+        rec["yearBasis"] = "poem" if not estimated else "dynasty"
+        if estimated:
+            ay = AY.get((s.get("dynasty"), s.get("author")))
+            if ay:
+                rec["year"] = ay
+                rec["yearBasis"] = "author"
         full[pid] = rec
 
     order_of = {k: o for k, o, _, _ in CL.DYNASTIES}
@@ -287,13 +308,20 @@ def main():
         if not rs:
             continue
         real = sum(1 for r in rs if not r["yearEstimated"])
+        by_author = sum(1 for r in rs if r.get("yearBasis") == "author")
+        # 直方图只收站得住的年份：逐篇断出来的，或按作者估出来的。
+        # 朝代占位年份一概不进 —— 否则整个朝代会堆在同一格。
         hist = Counter()
         for r in rs:
-            if r.get("year") is not None:
+            if r.get("year") is not None and r.get("yearBasis") in ("poem", "author"):
                 hist[int(r["year"] // 10 * 10)] += 1
+        confident = real >= max(20, len(rs) * 0.5)
+        placed = real + by_author
         bands.append({"k": key, "o": order, "slug": slug, "span": span,
-                      "c": len(rs), "real": real,
-                      "confident": real >= max(20, len(rs) * 0.5),
+                      "c": len(rs), "real": real, "byAuthor": by_author,
+                      "confident": confident,
+                      # 画得出图，但底子是作者生卒而非逐篇断代
+                      "byAuthorOnly": (not confident) and placed >= max(20, len(rs) * 0.5),
                       "hist": sorted([{"d": d, "n": n} for d, n in hist.items()],
                                      key=lambda x: x["d"])})
     w("agg/timeline.json", bands)

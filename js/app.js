@@ -617,26 +617,32 @@
     loading(host);
     Store.timeline().then(function (bands) {
       if (!ok()) return;
-      var anyLoose = bands.some(function (b) { return !b.confident; });
+      // 三种底子：逐篇断代、按作者生卒估算、只知朝代。
+      var anyAuthor = bands.some(function (b) { return b.byAuthorOnly; });
+      var anyLoose  = bands.some(function (b) { return !b.confident && !b.byAuthorOnly; });
       host.innerHTML =
-        (anyLoose ? '<p class="view-intro"><small class="caveat">' +
-          T("浅色的朝代尚未逐篇断代，只能按朝代整体定位。") + '</small></p>' : "") +
+        ((anyAuthor || anyLoose) ? '<p class="view-intro"><small class="caveat">' +
+          (anyAuthor ? T("虚线的朝代按作者生卒估算 —— 画的是诗人活在什么时候，不是这首诗写于哪一年。") : "") +
+          (anyAuthor && anyLoose ? '<br>' : "") +
+          (anyLoose ? T("浅色的朝代尚未逐篇断代，只能按朝代整体定位。") : "") +
+          '</small></p>' : "") +
         '<div class="tl-bands" id="tlBands"></div><div id="tlDrill"></div>';
       var wrap = $("#tlBands");
       var peak = 1;
       bands.forEach(function (b) { b.hist.forEach(function (h) { peak = Math.max(peak, h.n); }); });
 
       bands.forEach(function (b) {
-        var band = el("div", "tl-band" + (b.confident ? "" : " vague"));
+        var band = el("div", "tl-band" + (b.confident ? "" : b.byAuthorOnly ? " byauthor" : " vague"));
         band.innerHTML =
           '<div class="tl-band-head"><b>' + esc(T.dyn(b.k)) + '</b><em>' + esc(b.span) + '</em>' +
           '<i>' + T("{n} 篇", { n: b.c }) + '</i></div>';
         var bars = el("div", "tl-hist");
-        if (b.confident && b.hist.length > 1) {
+        if ((b.confident || b.byAuthorOnly) && b.hist.length > 1) {
           b.hist.forEach(function (h) {
             var bar = el("button", "tl-bar");
             bar.style.height = Math.max(3, Math.round(46 * h.n / peak)) + "px";
-            bar.title = T("{d} 年代 · {n} 篇", { d: T.year(h.d), n: h.n });
+            bar.title = T("{d} 年代 · {n} 篇", { d: T.year(h.d), n: h.n }) +
+              (b.byAuthorOnly ? " · " + T("按作者生卒估算") : "");
             bar.addEventListener("click", function () { go("/library/" + b.slug); });
             bars.appendChild(bar);
           });

@@ -727,6 +727,9 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .filters .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
 
 /* ============ 时间轴 ============ */
+/* 按作者估年的朝代：柱子照画，但用虚线的底框说明它不是逐篇断出来的。 */
+.tl-band.byauthor { border-style: dashed; }
+.tl-band.byauthor .tl-bar { opacity: .72; }
 .tl-bands { display: flex; flex-direction: column; gap: 8px; max-width: 780px; margin: 0 auto; }
 .tl-band {
   border: 1px solid var(--line); border-radius: 7px; padding: 11px 14px 9px;

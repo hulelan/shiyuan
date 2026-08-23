@@ -95,6 +95,9 @@ window.T = (function () {
     "浅色的朝代尚未逐篇断代，只能按朝代整体定位。":
       "Dimmed dynasties have not been dated poem by poem — they are placed by dynasty as a whole.",
     "尚未逐篇断代": "not yet dated per poem",
+    "虚线的朝代按作者生卒估算 —— 画的是诗人活在什么时候，不是这首诗写于哪一年。":
+      "Dashed dynasties are placed by the poet's dates \u2014 the shape shows when the poets lived, not when each poem was written.",
+    "按作者生卒估算": "placed by the poet's dates",
     "{d} 年代 · {n} 篇": "{d}s · {n} works",
     "{n} 篇": "{n} works",
 
