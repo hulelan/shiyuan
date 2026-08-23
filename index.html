@@ -65,6 +65,22 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  /* 字体试装：?font=b|c|d|e 换一副无衬线，记在本机；?font=a 回到宋体。
+     只改 --serif 一个变量，全站跟着走。 */
+  (function () {
+    var m = /[?&]font=([a-e])/.exec(location.search);
+    if (m) { try { localStorage.setItem("sy_font", m[1]); } catch (e) {} }
+    var f = m ? m[1] : (function(){ try { return localStorage.getItem("sy_font"); } catch(e){ return null; } })();
+    if (f && f !== "a") {
+      document.body.classList.add("font-" + f);
+      var NAME = { b: "系统无衬线", c: "黑体", d: "人文无衬线", e: "紧排" };
+      var tag = document.createElement("div");
+      tag.id = "fontTag"; tag.textContent = "font " + f.toUpperCase() + " · " + NAME[f];
+      document.body.appendChild(tag);
+    }
+  })();
+  </script>
   <script src="js/i18n.js"></script>
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>

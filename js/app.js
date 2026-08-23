@@ -357,8 +357,6 @@
     Store.authors().then(function (list) {
       if (!ok()) return;
       host.innerHTML =
-        '<p class="view-intro">' +
-          T("一人一生的笔墨，聚在一处看，才见得出脾气。按朝代筛选，或直接搜名字。") + '</p>' +
         '<div class="author-search"><input type="search" id="authorInput" placeholder="' +
           T("搜索作者，如 李白、苏轼…") + '" autocomplete="off"></div>' +
         '<div class="filters" id="authorFilters"></div>' +
@@ -457,8 +455,7 @@
       if (!ok()) return;
       // 体裁与主题共用这段渲染，两个视图会同时存在于 DOM 里。
       // 因此一律用 class + host 作用域查找：按 id 找会命中文档中靠前的那个视图。
-      host.innerHTML = '<p class="view-intro">' + intro + '</p>' +
-        '<div class="facet-nav"></div><div class="facet-body"></div>';
+      host.innerHTML = '<div class="facet-nav"></div><div class="facet-body"></div>';
       var nav = $(".facet-nav", host);
       // 主题有近千个（模型自由生成，无受控词表），一次全铺出来没法看：
       // 先只列常见的，其余折在"更多"后面。选中的那个无论排多后都要露出来。
@@ -561,8 +558,7 @@
       if (!ok()) return;
       host.innerHTML =
         '<p class="view-intro">' +
-        T('古人炼字，一字千金。这里可循一个字走进无数诗篇——看"月"如何照过千年，"风"如何吹遍江山。') +
-        '<br><small class="caveat">' +
+        '<small class="caveat">' +
         T("已为最常见的 {a} 个字建立索引（全库共 {b} 个不同字）；每字最多列 {c} 例，且跨朝代抽样，不是只取最早的几篇。",
           { a: sum.indexed, b: sum.distinct, c: sum.maxHits }) + '</small></p>' +
         '<div class="word-search"><input type="search" id="wordInput" placeholder="' +
@@ -623,11 +619,9 @@
       if (!ok()) return;
       var anyLoose = bands.some(function (b) { return !b.confident; });
       host.innerHTML =
-        '<p class="view-intro">' +
-        T("沿着时间之河，看文言文从《诗经》的四言到唐诗的格律、宋词的长短句，如何一路演变。") +
-        (anyLoose ? '<br><small class="caveat">' +
-          T("浅色的朝代尚未逐篇断代，只能按朝代整体定位。") + '</small>' : "") +
-        '</p><div class="tl-bands" id="tlBands"></div><div id="tlDrill"></div>';
+        (anyLoose ? '<p class="view-intro"><small class="caveat">' +
+          T("浅色的朝代尚未逐篇断代，只能按朝代整体定位。") + '</small></p>' : "") +
+        '<div class="tl-bands" id="tlBands"></div><div id="tlDrill"></div>';
       var wrap = $("#tlBands");
       var peak = 1;
       bands.forEach(function (b) { b.hist.forEach(function (h) { peak = Math.max(peak, h.n); }); });
@@ -671,9 +665,7 @@
   function viewMap() {
     var host = $("#view-map"), ok = guard();
     if (mapDone) { setTimeout(function () { map && map.invalidateSize(); }, 60); return; }
-    host.innerHTML = '<p class="view-intro">' +
-      T("每一首诗都诞生在具体的山川之间。点击标记，看看哪些名篇写于同一片土地。") + '</p>' +
-      '<div id="mapCanvas"></div>' +
+    host.innerHTML = '<div id="mapCanvas"></div>' +
       '<div class="map-time" id="mapTime"></div>' +
       '<p class="map-note" id="mapNote"></p>';
     if (typeof L === "undefined") {

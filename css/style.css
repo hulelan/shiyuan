@@ -33,6 +33,33 @@
   --serif-en: Georgia, "Times New Roman", serif;
 }
 
+/* ---- 字体试装 ----------------------------------------------------------
+   全站的字都走 --serif，所以换一处即可整体换装。?font=b|c|d|e 各是一副
+   无衬线；不带参数仍是宋体。诗行本身另有 .poem-body 的规矩，不在此列。 */
+body.font-b {            /* 系统无衬线：苹方 / 思源黑 */
+  --serif: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB",
+           "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --serif-en: system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+body.font-c {            /* 黑体：更方，笔画等宽，像展签 */
+  --serif: "Heiti SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --serif-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+body.font-d {            /* 人文无衬线：西文圆润，中文仍用苹方 */
+  --serif: "Avenir Next", "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  --serif-en: "Avenir Next", "Segoe UI", Arial, sans-serif;
+}
+body.font-e {            /* 紧排：字距收一点，适合信息密的页面 */
+  --serif: Inter, "Helvetica Neue", "PingFang SC", "Noto Sans SC", sans-serif;
+  --serif-en: Inter, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+}
+body[class*="font-"] .view-intro,
+body[class*="font-"] .caveat { letter-spacing: .5px; }
+#fontTag { position: fixed; left: 10px; bottom: 10px; z-index: 90;
+  font: 11px/1 ui-monospace, Menlo, monospace; letter-spacing: 2px;
+  color: var(--ink-soft); opacity: .6; }
+
 * { box-sizing: border-box; }
 
 html, body {
