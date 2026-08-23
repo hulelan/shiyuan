@@ -846,3 +846,75 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
   .mt-hint { display: none; }
   .map-time { padding: 0 4px; }
 }
+
+/* ============ 更多视角（顶栏下拉） ============ */
+/* 顶栏只留首页 + 这一个。七栏并排时它们互相稀释，谁都不显眼；
+   收进来之后，展开一次就能看清都有些什么，每一项还带得下一句说明。 */
+.tabs { align-items: center; }
+.lens { position: relative; }
+.lens-btn {
+  font-family: var(--serif); font-size: 13px; letter-spacing: 2px;
+  padding: 5px 11px; border: none; background: transparent;
+  color: var(--ink-soft); cursor: pointer; border-radius: 4px;
+  display: flex; align-items: center; gap: 5px; transition: all .18s;
+}
+.lens-btn:hover { color: var(--cinnabar); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
+.lens.open > .lens-btn { color: var(--cinnabar); background: color-mix(in srgb, var(--cinnabar) 8%, transparent); }
+/* 正身处某个视角时，按钮显示那一栏的名字，并按选中样式描出来 */
+.lens.active > .lens-btn { color: var(--on-accent); background: var(--cinnabar); box-shadow: 0 2px 6px var(--shadow); }
+.lens-caret { font-size: 9px; opacity: .7; transition: transform .18s; }
+.lens.open .lens-caret { transform: rotate(180deg); }
+
+.lens-menu {
+  position: absolute; top: calc(100% + 7px); right: 0; z-index: 600;
+  min-width: 236px; padding: 5px;
+  background: var(--paper-hi); border: 1px solid var(--line); border-radius: 7px;
+  box-shadow: 0 10px 30px var(--shadow), 0 2px 6px var(--shadow-soft);
+  animation: lensIn .16s ease;
+}
+@keyframes lensIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+.lens-menu[hidden] { display: none; }
+
+.lens-item {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  font-family: var(--serif); background: none; border: none;
+  padding: 7px 11px; border-radius: 5px; transition: background .14s;
+}
+.lens-item:hover, .lens-item:focus {
+  background: color-mix(in srgb, var(--cinnabar) 7%, transparent); outline: none;
+}
+.lens-item.on { background: color-mix(in srgb, var(--jade) 10%, transparent); }
+.lens-item.on .li-n { color: var(--jade); }
+.li-n { display: block; font-size: 13.5px; letter-spacing: 2px; color: var(--ink); }
+.li-d { display: block; font-size: 10.5px; letter-spacing: .5px; color: var(--gold); margin-top: 2px; }
+
+@media (max-width: 640px) {
+  .lens-btn { padding: 4px 8px; font-size: 12px; letter-spacing: 1px; }
+  .lens-menu { min-width: 200px; }
+  .li-d { display: none; }   /* 窄屏放不下说明，留名字就够 */
+}
+
+/* ============ 与此篇相近 ============ */
+/* 排在赏析之后、投稿口之前：读完一篇，才谈得上"还有哪些像它"。 */
+.pd-near:empty { display: none; }
+.pd-near { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.near-h {
+  margin: 0 0 8px; font-size: 12px; letter-spacing: 3px; color: var(--cinnabar);
+}
+.near-h.dup { color: var(--gold); }
+.near-h + .near-h, .near-list + .near-h { margin-top: 18px; }
+.near-note { margin: -4px 0 8px; font-size: 10.5px; letter-spacing: .5px; color: var(--gold); }
+.near-list { display: flex; flex-direction: column; gap: 1px; }
+.near-row {
+  display: flex; align-items: baseline; gap: 10px; cursor: pointer;
+  padding: 6px 9px; border-radius: 4px; transition: background .14s;
+}
+.near-row:hover { background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
+.nr-t { font-size: 13.5px; letter-spacing: 1px; color: var(--ink); }
+.nr-a { font-size: 11px; letter-spacing: .5px; color: var(--ink-soft); }
+.near-row .nr-a { margin-left: auto; }
+
+@media (max-width: 640px) {
+  .near-row { padding: 7px 4px; }
+  .nr-t { font-size: 13px; }
+}

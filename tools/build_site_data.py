@@ -124,8 +124,21 @@ def main():
         sys.exit("原文层为空。先跑 tools/migrate_corpus.py --write。")
     print("读入 原文 %d 篇 / 编辑 %d 篇" % (len(src), len(enr)))
 
+    # 产物目录整体重建，避免残留上一次的分片。
+    # near/ 与 bm25/ 例外 —— 那两份是 tools/build_relevance.py 的产物，
+    # 一起删掉就等于每次重建语料都要连着重跑一次嵌入（六分多钟）。
+    # 留着，并在 manifest 里标 stale，让人自己决定什么时候重算。
+    KEEP = {"near", "bm25"}
+    prev_manifest = {}
     if os.path.isdir(SITE):
-        shutil.rmtree(SITE)      # 产物目录整体重建，避免残留上一次的分片
+        mp = os.path.join(SITE, "manifest.json")
+        if os.path.exists(mp):
+            prev_manifest = json.load(open(mp, encoding="utf-8"))
+        for name in os.listdir(SITE):
+            if name in KEEP:
+                continue
+            path = os.path.join(SITE, name)
+            shutil.rmtree(path) if os.path.isdir(path) else os.remove(path)
 
     # ---- 合成完整记录，顺带算好体裁与生效年份 ----
     full = {}
@@ -403,6 +416,26 @@ def main():
         "charMaxHits": CHAR_MAX_HITS, "charsTruncated": truncated,
         "searchScope": "title+author",
     }
+
+    # 相近篇目与 BM25 那几项是 build_relevance.py 写的，不归本脚本管，
+    # 但 manifest 是整份重写的 —— 不接过来的话，跑完这个脚本相似度就"消失"了：
+    # 页面不报错，只是那一块静悄悄不见，这种问题最难查。
+    OWNED = ["nearBuckets", "bm25Buckets", "nearK", "nearCount", "dupCount",
+             "nearSemantic", "bm25"]
+    carried = {k: prev_manifest[k] for k in OWNED if k in prev_manifest}
+    if carried:
+        manifest.update(carried)
+        # 语料指纹变了而 build_relevance 还没重跑 —— 邻居表是旧的。
+        # 旧不等于坏：邻居指向的作品若已不在，前端那一行自己会消失。
+        manifest["relevanceStale"] = prev_manifest.get("build") != manifest["build"]
+        if manifest["relevanceStale"]:
+            print("\n注意：相近篇目与 BM25 索引还是上一版语料算的。")
+            print("      重算：./.venv-ml/bin/python tools/embed_corpus.py"
+                  " && ./.venv/bin/python tools/build_relevance.py")
+    else:
+        print("\n提示：还没有相近篇目与 BM25 索引。")
+        print("      生成：./.venv-ml/bin/python tools/embed_corpus.py"
+              " && ./.venv/bin/python tools/build_relevance.py")
     w("manifest.json", manifest)
 
     # ---- 报告 ----

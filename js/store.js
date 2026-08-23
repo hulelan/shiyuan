@@ -107,8 +107,61 @@ window.Store = (function () {
         .then(function (m) { return m[ch] || null; });
     },
 
+    /* 与此篇相近。构建期算好的，前端只取一片。
+       返回 {n: [[id, 分], …], d: [[id, 分], …]} —— d 是同篇异录（另一处著录）。 */
+    near: function (id) {
+      return get("near/" + p2(bucket(id, M.nearBuckets)) + ".json")
+        .then(function (m) { return m[id] || null; })
+        ["catch"](function () { return null; });
+    },
+
+    /* 检索 · BM25。
+       正文已入索引，排序用构建期算好的 BM25 权重（见 tools/build_relevance.py）。
+       前端要做的只是把查询切成二元组、取几个桶、把各词的分加起来。 */
+    searchBM25: function (q) {
+      q = (q || "").trim();
+      if (!q) return Promise.resolve([]);
+      var han = q.match(/[一-鿿]/g) || [];
+      if (!han.length) return Promise.resolve([]);
+      var terms = [];
+      if (han.length === 1) terms.push(han[0]);
+      for (var i = 0; i < han.length - 1; i++) terms.push(han[i] + han[i + 1]);
+
+      var need = [];
+      terms.forEach(function (t) {
+        var k = bucket(t, M.bm25Buckets);
+        if (need.indexOf(k) < 0) need.push(k);
+      });
+      return Promise.all(need.map(function (k) {
+        return get("bm25/" + p2(k) + ".json")["catch"](function () { return null; });
+      })).then(function (loaded) {
+        var byBucket = {};
+        need.forEach(function (k, i) { byBucket[k] = loaded[i]; });
+        var score = {}, row = {}, hits = {};
+        terms.forEach(function (t) {
+          var B = byBucket[bucket(t, M.bm25Buckets)];
+          if (!B || !B.g[t]) return;
+          B.g[t].forEach(function (pair) {
+            var c = B.c[pair[0]], id = c[0];
+            score[id] = (score[id] || 0) + pair[1];
+            hits[id] = (hits[id] || 0) + 1;
+            row[id] = { id: id, t: c[1], a: c[2], d: c[3] };
+          });
+        });
+        /* 命中的词越多越该靠前 —— 搜"明月光"时三个二元组全中的，
+           要压过只中了一个"明月"的。乘一个温和的系数，别让它盖过 BM25 本身。 */
+        return Object.keys(score)
+          .map(function (id) {
+            row[id].s = score[id] * (1 + 0.35 * (hits[id] - 1));
+            return row[id];
+          })
+          .sort(function (a, b) { return b.s - a.s || a.d - b.d; });
+      });
+    },
+
     /* 检索：只覆盖标题与作者（正文不入索引）。
-       把查询词切成二元组，各取所在的桶，按命中的二元组个数排序。 */
+       把查询词切成二元组，各取所在的桶，按命中的二元组个数排序。
+       BM25 那套上线后这条就不再被调用了，留着作后路。 */
     search: function (q) {
       q = (q || "").trim();
       if (!q) return Promise.resolve([]);

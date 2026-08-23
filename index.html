@@ -24,15 +24,16 @@
       <h1>诗渊</h1>
       <span class="brand-sub" id="bootStat">古诗古文 · 溯源</span>
     </div>
+    <!-- 顶栏只留首页；其余七种看法收进「更多视角」。
+         菜单项由 js/app.js 生成 —— 那里已经有一份视图清单，
+         再在这里抄一遍，早晚会跟它对不上。 -->
     <nav class="tabs" id="viewTabs">
       <button data-view="home" class="active">首页</button>
-      <button data-view="library">诗文库</button>
-      <button data-view="authors">作者</button>
-      <button data-view="type">体裁</button>
-      <button data-view="theme">主题</button>
-      <button data-view="word">字词</button>
-      <button data-view="timeline">时间轴</button>
-      <button data-view="map">地图</button>
+      <div class="lens" id="lens">
+        <button class="lens-btn" id="lensBtn" aria-haspopup="true" aria-expanded="false"
+                aria-controls="lensMenu">更多视角<span class="lens-caret">▾</span></button>
+        <div class="lens-menu" id="lensMenu" role="menu" hidden></div>
+      </div>
     </nav>
     <div class="searchbox">
       <input type="search" id="search" placeholder="搜索标题或作者…" autocomplete="off">

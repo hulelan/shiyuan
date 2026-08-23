@@ -26,6 +26,15 @@ window.T = (function () {
     "字词": "Words",
     "时间轴": "Timeline",
     "地图": "Map",
+    /* 顶栏的下拉。每一项带一句说明，展开时才看得到 */
+    "更多视角": "Other ways in",
+    "按朝代翻卡片": "Browse by dynasty",
+    "一人一生的笔墨": "A poet's whole hand",
+    "四言、律诗、词、曲": "Four-character verse, regulated verse, ci, qu",
+    "送别、思乡、田园": "Parting, homesickness, the countryside",
+    "循一个字走进诗篇": "Follow a single character",
+    "沿年份看诗体流变": "How the forms changed over time",
+    "诗写在哪一片土地上": "Where the poems were written",
     "搜索标题或作者…": "Search titles or poets…",
     "文本仅供学习研究之用": "Texts provided for study and research",
 
@@ -113,8 +122,18 @@ window.T = (function () {
     "\"<b>{q}</b>\" 命中 <b>{n}</b> 条": "<b>{n}</b> matches for \"<b>{q}</b>\"",
     "检索范围为标题与作者；正文暂未建索引。":
       "Search covers titles and poets only; the poem texts are not indexed yet.",
+    "标题、作者与正文都在检索范围内，按相关度排序。":
+      "Titles, poets and poem texts are all searched, ranked by relevance.",
     "没有匹配的标题或作者。": "No matching title or poet.",
+    "没有匹配的作品。": "Nothing matched.",
     "仅显示前 300 条": "First 300 shown",
+
+    /* ---- 与此篇相近 ---- */
+    "与此篇相近": "Close to this one",
+    "同篇异录": "The same work, filed twice",
+    "同一首作品在本库中的另一处著录，题名或归属或有出入。":
+      "Another record of the same work in this collection; the title or attribution may differ.",
+    "相近度": "closeness",
 
     /* ---- 详情浮层 ---- */
     "译　文": "Translation",

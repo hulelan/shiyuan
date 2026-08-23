@@ -804,15 +804,22 @@
   function viewSearch(q) {
     var host = $("#view-search"), ok = guard();
     loading(host, T("检索中…"));
-    Store.search(q).then(function (rows) {
+    // 有 BM25 分片就用它（正文入索引、按相关性排序），没有就退回旧的那套
+    var M = Store.manifest();
+    var run = M && M.bm25Buckets ? Store.searchBM25(q) : Store.search(q);
+    run.then(function (rows) {
       if (!ok()) return;
+      var ranked = M && M.bm25Buckets;
       host.innerHTML = '<p class="view-intro">' +
         T('"<b>{q}</b>" 命中 <b>{n}</b> 条', { q: esc(q), n: rows.length }) +
-        '<br><small class="caveat">' + T("检索范围为标题与作者；正文暂未建索引。") + '</small></p>' +
+        '<br><small class="caveat">' +
+        T(ranked ? "标题、作者与正文都在检索范围内，按相关度排序。"
+                 : "检索范围为标题与作者；正文暂未建索引。") + '</small></p>' +
         '<div id="searchBody"></div>';
       var body = $("#searchBody");
       if (!rows.length) {
-        body.innerHTML = '<p class="empty">' + T("没有匹配的标题或作者。") + '</p>';
+        body.innerHTML = '<p class="empty">' +
+          T(ranked ? "没有匹配的作品。" : "没有匹配的标题或作者。") + '</p>';
         return;
       }
       var list = el("div", "word-list");
@@ -826,6 +833,57 @@
       body.appendChild(list);
       if (rows.length > 300) body.appendChild(el("p", "count", T("仅显示前 300 条")));
     })["catch"](function (e) { if (ok()) failed(host, e); });
+  }
+
+  /* ---------- 与此篇相近 ----------
+     邻居是构建期算好的（tools/build_relevance.py）：字的二元组 TF-IDF
+     加上句意的向量，两路合并。这里只负责把 id 换成看得懂的一行。
+
+     邻居表里只有 id 和分数 —— 标题作者要现取。一次 Promise.all 抓齐，
+     抓不到的那条就不显示，不让一条坏数据把整块拖垮。 */
+  /* 只排名次，不印分数。
+     排序用的是几套表的名次融合，展示分是余弦 —— 两者本来就不同调，
+     并排放出来只会让人以为第三名比第一名更像。名次本身已经说完了要说的。 */
+  function nearRow(card) {
+    var row = el("div", "near-row",
+      '<span class="nr-t">《' + esc(card.title) + '》</span>' +
+      '<span class="nr-a">' + esc(T.dyn(card.dynasty)) + ' · ' + esc(card.author) + '</span>');
+    row.addEventListener("click", function () { go("/poem/" + card.id); });
+    return row;
+  }
+  function renderNear(p) {
+    var host = $("#pdNear");
+    if (!host) return;
+    Store.near(p.id).then(function (rec) {
+      if (!rec || !$("#pdNear")) return;
+      host = $("#pdNear");
+      var all = (rec.d || []).concat(rec.n || []);
+      if (!all.length) return;
+      return Promise.all(all.map(function (pair) {
+        return Store.poemById(pair[0])["catch"](function () { return null; });
+      })).then(function (poems) {
+        var dn = (rec.d || []).length;
+        var kin = [], dup = [];
+        poems.forEach(function (q, i) {
+          if (!q) return;
+          (i < dn ? dup : kin).push([q, all[i][1]]);
+        });
+        if (!kin.length && !dup.length) return;
+        var html = "";
+        if (dup.length) {
+          html += '<h4 class="near-h dup">' + T("同篇异录") + '</h4>' +
+            '<p class="near-note">' + T("同一首作品在本库中的另一处著录，题名或归属或有出入。") +
+            '</p><div class="near-list" id="nearDup"></div>';
+        }
+        if (kin.length) {
+          html += '<h4 class="near-h">' + T("与此篇相近") + '</h4>' +
+            '<div class="near-list" id="nearKin"></div>';
+        }
+        host.innerHTML = html;
+        dup.forEach(function (x) { $("#nearDup", host).appendChild(nearRow(x[0])); });
+        kin.forEach(function (x) { $("#nearKin", host).appendChild(nearRow(x[0])); });
+      });
+    })["catch"](function () { /* 没有邻居不是错，静默即可 */ });
   }
 
   // ---------- 详情浮层 ----------
@@ -884,6 +942,7 @@
           T("✦ 译文 / 注释 / 赏析 / 英译 由 AI（{by}）生成，待校订", { by: esc(p.enrichedBy) }) +
           '</div>' : "") +
         '<div class="pd-sections">' + sec + '</div>' +
+        '<div class="pd-near" id="pdNear"></div>' +
         // 投稿口放在最下面：读完一篇，才谈得上想给它配什么画
         '<div class="pd-suggest"><a href="' + esc(artIssueUrl(p)) +
           '" target="_blank" rel="noopener" title="' +
@@ -902,6 +961,7 @@
         var hidden = $("#pdPoem").classList.toggle("no-pinyin");
         this.textContent = hidden ? T("显示拼音") : T("隐藏拼音");
       });
+      renderNear(p);
     })["catch"](function (e) {
       d.innerHTML = '<button class="close-btn" id="closeDetail">×</button>' +
         '<p class="loadfail">' + T("没能取到这首作品。") + '<br><small>' + esc(e.message) + '</small></p>';
@@ -921,9 +981,23 @@
                "word", "timeline", "map", "search"];
   function show(v) {
     VIEWS.forEach(function (n) { $("#view-" + n).classList.toggle("hidden", n !== v); });
-    document.querySelectorAll("#viewTabs button").forEach(function (b) {
+    document.querySelectorAll("#viewTabs > button[data-view]").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-view") === v);
     });
+    /* 顶栏已经看不见那七栏了，得让下拉按钮自己说清楚当前在哪：
+       在某个视角里，按钮就显示那个视角的名字。作者专页归到「作者」下。 */
+    var lens = v === "author" ? "authors" : v;
+    var hit = LENSES.filter(function (l) { return l.k === lens; })[0];
+    var box = $("#lens"), lb = $("#lensBtn");
+    if (box && lb) {
+      box.classList.toggle("active", !!hit);
+      lb.innerHTML = esc(hit ? T(hit.n) : T("更多视角")) +
+        '<span class="lens-caret">\u25be</span>';
+    }
+    $("#lensMenu") && $("#lensMenu").querySelectorAll(".lens-item").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-view") === lens);
+    });
+    lensOpen(false);
   }
   function go(path, replace) {
     if (replace) location.replace("#" + path); else location.hash = path;
@@ -960,18 +1034,56 @@
     }
   }
 
+  /* ---------- 更多视角 ----------
+     首页留在顶栏，其余七种看法收进一个下拉。
+     每一项带一句话说明 —— 菜单一展开就有地方交代"这一栏是干嘛的"，
+     这是原先七个并排的标签给不了的。 */
+  var LENSES = [
+    { k: "library",  n: "诗文库",  d: "按朝代翻卡片" },
+    { k: "authors",  n: "作者",    d: "一人一生的笔墨" },
+    { k: "type",     n: "体裁",    d: "四言、律诗、词、曲" },
+    { k: "theme",    n: "主题",    d: "送别、思乡、田园" },
+    { k: "word",     n: "字词",    d: "循一个字走进诗篇" },
+    { k: "timeline", n: "时间轴",  d: "沿年份看诗体流变" },
+    { k: "map",      n: "地图",    d: "诗写在哪一片土地上" }
+  ];
+  var TAB_LABEL = { home: "首页" };
+  LENSES.forEach(function (l) { TAB_LABEL[l.k] = l.n; });
+
+  function lensOpen(on) {
+    var box = $("#lens"), btn = $("#lensBtn"), menu = $("#lensMenu");
+    if (!box) return;
+    box.classList.toggle("open", on);
+    btn.setAttribute("aria-expanded", on ? "true" : "false");
+    menu.hidden = !on;
+  }
+  function buildLens() {
+    var menu = $("#lensMenu");
+    if (!menu) return;
+    menu.innerHTML = LENSES.map(function (l) {
+      return '<button class="lens-item" role="menuitem" data-view="' + l.k + '">' +
+        '<span class="li-n">' + esc(T(l.n)) + '</span>' +
+        '<span class="li-d">' + esc(T(l.d)) + '</span></button>';
+    }).join("");
+    menu.querySelectorAll(".lens-item").forEach(function (b) {
+      b.addEventListener("click", function () {
+        lensOpen(false);
+        go("/" + b.getAttribute("data-view"));
+      });
+    });
+  }
+
   // ---------- 中 / EN ----------
   /* 只换界面。诗文、作者名、体裁名、主题词都不动 —— 那些是内容。
      切换后重走一遍 route()：所有视图都是现渲染的，不必刷新页面。 */
-  var TAB_LABEL = {
-    home: "首页", library: "诗文库", authors: "作者", type: "体裁",
-    theme: "主题", word: "字词", timeline: "时间轴", map: "地图"
-  };
   function applyChrome() {
-    document.querySelectorAll("#viewTabs button").forEach(function (b) {
+    document.querySelectorAll("#viewTabs button[data-view]").forEach(function (b) {
       var k = b.getAttribute("data-view");
       if (TAB_LABEL[k]) b.textContent = T(TAB_LABEL[k]);
     });
+    var lb = $("#lensBtn");
+    if (lb) lb.innerHTML = esc(T("更多视角")) + '<span class="lens-caret">\u25be</span>';
+    buildLens();
     var box = $("#search");
     if (box) box.setAttribute("placeholder", T("搜索标题或作者…"));
     var foot = $(".site-footer");
@@ -988,12 +1100,45 @@
 
   // ---------- init ----------
   function init() {
-    document.querySelectorAll("#viewTabs button").forEach(function (b) {
+    document.querySelectorAll("#viewTabs > button[data-view]").forEach(function (b) {
       b.addEventListener("click", function () {
         var v = b.getAttribute("data-view");
         go(v === "home" ? "/" : "/" + v);
       });
     });
+
+    var lensBtn = $("#lensBtn");
+    if (lensBtn) {
+      lensBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        lensOpen(!$("#lens").classList.contains("open"));
+      });
+      // 点别处、按 Esc 都收起来
+      document.addEventListener("click", function (e) {
+        if (!$("#lens").contains(e.target)) lensOpen(false);
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        if ($("#lens").classList.contains("open")) lensOpen(false);
+      });
+      // 键盘：下箭头展开并落到第一项
+      lensBtn.addEventListener("keydown", function (e) {
+        if (e.key !== "ArrowDown") return;
+        e.preventDefault();
+        lensOpen(true);
+        var first = $("#lensMenu .lens-item");
+        if (first) first.focus();
+      });
+      $("#lensMenu").addEventListener("keydown", function (e) {
+        var items = [].slice.call(this.querySelectorAll(".lens-item"));
+        var i = items.indexOf(document.activeElement);
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          var j = (i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+          items[j].focus();
+        }
+      });
+    }
 
     var lt = $("#langToggle");
     if (lt) lt.addEventListener("click", function () {
