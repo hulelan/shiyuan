@@ -74,7 +74,7 @@
     var f = m ? m[1] : (function(){ try { return localStorage.getItem("sy_font"); } catch(e){ return null; } })();
     if (f && f !== "a") {
       document.body.classList.add("font-" + f);
-      var NAME = { b: "系统无衬线", c: "黑体", d: "人文无衬线", e: "紧排" };
+      var NAME = { b: "界面无衬线", c: "Helvetica + 黑体", d: "Avenir + 苹方", e: "Georgia + 宋体" };
       var tag = document.createElement("div");
       tag.id = "fontTag"; tag.textContent = "font " + f.toUpperCase() + " · " + NAME[f];
       document.body.appendChild(tag);

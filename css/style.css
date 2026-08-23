@@ -29,30 +29,38 @@
   --chrome-hi: #232019; --chrome-lo: #17150f;
   --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
 
-  --serif:    "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", Georgia, serif;
-  --serif-en: Georgia, "Times New Roman", serif;
+  /* 拉丁字母排在中文字体之前 —— 这是关键。原来 Songti SC 打头，英文就由
+     宋体自带的那副拉丁字母来排，字宽、字重都不对，英文界面因此难看。
+     浏览器逐字回退：拉丁走前面的西文字体，汉字落到后面的宋体，两不相干。 */
+  --serif:    ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue",
+              "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", sans-serif;
+  --serif-en: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  /* 诗行仍用宋体：那是正文，不是界面 */
+  --serif-poem: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", Georgia, serif;
 }
 
 /* ---- 字体试装 ----------------------------------------------------------
    全站的字都走 --serif，所以换一处即可整体换装。?font=b|c|d|e 各是一副
    无衬线；不带参数仍是宋体。诗行本身另有 .poem-body 的规矩，不在此列。 */
-body.font-b {            /* 系统无衬线：苹方 / 思源黑 */
-  --serif: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB",
+/* 每一副都把西文排在最前，汉字回退到后面 —— 否则英文又会由中文字体来排。 */
+body.font-b {            /* 界面无衬线 + 苹方 */
+  --serif: ui-sans-serif, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
            "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  --serif-en: system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --serif-en: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
-body.font-c {            /* 黑体：更方，笔画等宽，像展签 */
-  --serif: "Heiti SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+body.font-c {            /* Helvetica + 黑体：更方，像展签 */
+  --serif: "Helvetica Neue", Helvetica, Arial, "Heiti SC", "Hiragino Sans GB",
+           "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --serif-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
-body.font-d {            /* 人文无衬线：西文圆润，中文仍用苹方 */
-  --serif: "Avenir Next", "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
-  --serif-en: "Avenir Next", "Segoe UI", Arial, sans-serif;
+body.font-d {            /* Avenir + 苹方：西文圆润 */
+  --serif: "Avenir Next", Avenir, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  --serif-en: "Avenir Next", Avenir, "Segoe UI", Arial, sans-serif;
 }
-body.font-e {            /* 紧排：字距收一点，适合信息密的页面 */
-  --serif: Inter, "Helvetica Neue", "PingFang SC", "Noto Sans SC", sans-serif;
-  --serif-en: Inter, "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: 0;
+body.font-e {            /* Georgia + 宋体：仍是衬线，但西文有自己的字 */
+  --serif: Georgia, "Iowan Old Style", "Times New Roman",
+           "Songti SC", "STSong", "Noto Serif SC", serif;
+  --serif-en: Georgia, "Iowan Old Style", "Times New Roman", serif;
 }
 body[class*="font-"] .view-intro,
 body[class*="font-"] .caveat { letter-spacing: .5px; }
@@ -283,6 +291,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 .pd-place { font-size: 13px; color: var(--jade); margin-top: 6px; letter-spacing: 1px; }
 
 /* text + pinyin */
+/* 诗文本身回到宋体。界面可以是无衬线，诗行不该是。 */
+.pd-poem, .pd-head h2, .poem-card .zh { font-family: var(--serif-poem); }
 .pd-poem { text-align: center; padding: 22px 0 6px; }
 .pd-line { margin: 4px 0; }
 .pd-line .py { display: block; font-size: 10.5px; color: var(--gold); letter-spacing: 1px; margin-bottom: 1px; height: 14px; }
