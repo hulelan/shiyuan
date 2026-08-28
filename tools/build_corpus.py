@@ -45,8 +45,14 @@ SOURCES = [
     {"path": "四书五经/mengzi.json",      "dynasty": "先秦", "order": 1, "year": -300, "genre": "文", "form": "孟子", "unit": "para", "author": "孟子", "trad": True,  "limit": 300},
 ]
 
-MAX_CHARS = 360        # 诗词曲：只收较短篇目，控制卡片观感与后续生成成本
-MAX_CHARS_PROSE = 600  # 文言文散文/语录：放宽上限
+# 篇幅上限。原先是 360 / 600，那一条把汉语里最有名的几首长诗挡在了外面：
+# 《长恨歌》840 字、《琵琶行》616 字、《茅屋为秋风所破歌》、《前赤壁赋》，
+# 都不是没导，是导进来又被这里滤掉了。
+# 放宽到 1500 / 2500。《离骚》约 2400 字仍在散文那一档之内，
+# 但它排版是另一回事，真要收得单独处理。
+# 与 tools/import_canon.py 的 MAX_CHARS 保持一致。
+MAX_CHARS = 1500       # 诗词曲
+MAX_CHARS_PROSE = 2500 # 文言文散文/语录
 MIN_CHARS = 8
 
 def fetch(path):

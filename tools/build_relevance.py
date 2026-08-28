@@ -83,11 +83,34 @@ def main():
     sem_cls, sem_mod, sem_meta = {}, {}, None
     if os.path.exists(SEMANTIC):
         d = json.load(open(SEMANTIC, encoding="utf-8"))
-        sem_cls = {p: [tuple(x) for x in v] for p, v in d["near"]["cls"].items()}
-        sem_mod = {p: [tuple(x) for x in v] for p, v in d["near"]["mod"].items()}
+        # 向量文件可能比语料旧：既会少了新篇，也会留着已经删掉的篇。
+        # 后者必须在这里滤掉 —— 否则那些 id 会混进邻居表，
+        # 到下面查 src[pid] 时才炸，而且报的是一个看不出所以然的 KeyError。
+        def clean(tbl):
+            out = {}
+            for pid, v in tbl.items():
+                if pid not in src:
+                    continue
+                keep = [tuple(x) for x in v if x[0] in src]
+                if keep:
+                    out[pid] = keep
+            return out
+        sem_cls = clean(d["near"]["cls"])
+        sem_mod = clean(d["near"]["mod"])
+        stale = (len(d["near"]["cls"]) - len(sem_cls))
         sem_meta = {"model": d.get("model"), "enriched": d.get("enriched")}
         print("语义层：%s，古文 %d 篇 / 今文 %d 篇"
               % (sem_meta["model"], len(sem_cls), len(sem_mod)))
+        # 语料变过而没重跑 embed_corpus.py 时，新篇目只有词面一路信号。
+        # 这不算坏，但邻居明显更松，得说出来 —— 不然只会觉得"新导的诗推荐不准"。
+        gap = [p for p in ids if p not in sem_cls]
+        if gap:
+            print("  ！其中 %d 篇没有语义向量（语料比向量新），只能靠词面层。"
+                  % len(gap))
+            print("    补齐：./.venv-ml/bin/python tools/embed_corpus.py --no-cache")
+            sem_meta["missing"] = len(gap)
+        if stale:
+            print("  另有 %d 篇向量对应的作品已从语料里删掉，已忽略" % stale)
     else:
         print("语义层：没找到 data/near_semantic.json —— 只用词面层。")
         print("  跑一遍 ./.venv-ml/bin/python tools/embed_corpus.py 可以补上。")

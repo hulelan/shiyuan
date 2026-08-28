@@ -14,3 +14,4 @@ __pycache__/
 # 目前随仓库提交（GitHub Pages 直接从 main 发布，需要静态文件在库里）
 data/.embed_cache/
 .venv-ml/
+tools/.cache/canon/
