@@ -322,6 +322,17 @@ python3 -m venv .venv-ml
   其中 748 个不足 5 篇。扩库前值得先定一份词表并回标。
 - **同篇异录 125 对**（涉及 240 篇，5.6%），清单见 `data/dupes.tsv`，尚未处理。
   扩到 50k 之前值得清一轮，否则同一个问题会按比例放大。
+- **语义向量落后于语料一轮**（2026-08）：语料补到 4,675 篇之后，
+  `embed_corpus.py` 没能跑完 —— 不是脚本的问题，是当时机器的文件系统慢到
+  读一个几 KB 的 .py 要一分多钟（磁盘 96% 满）。当前 3,768 篇有语义向量，
+  907 篇（多是新导入的）只有词面一路，邻居明显更松。
+  `build_relevance.py` 每次都会把这个数字打出来。补齐：
+
+  ```bash
+  HF_HUB_OFFLINE=1 ./.venv-ml/bin/python tools/embed_corpus.py --no-cache
+  ./.venv/bin/python tools/build_relevance.py
+  ```
+
 - **相近篇目的质量取决于 enrich**：没做过译文/赏析的 1336 篇只有古文一路信号，
   邻居明显更松。剩下的 enrich 跑完，这一块会跟着变好。
 - **残留的人缘偏差**：CSLS 之后仍有少数篇目偏爱当邻居 ——
