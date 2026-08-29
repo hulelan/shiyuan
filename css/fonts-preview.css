@@ -1,0 +1,47 @@
+/* fonts-preview.css —— 临时，试字体用。
+   选定一副之后：把它的字体表抄进 style.css 的 --latin，
+   删掉这个文件、fonts.html、以及 index.html 里那段 <link> 与读 localStorage 的脚本。
+
+   为什么这里要把整条字体表写全，而不是只改 --latin：
+   style.css 里 --ui 是 `var(--latin), var(--han)`，而它定义在 :root 上。
+   自定义属性的替换发生在**定义处**，不是使用处 —— :root 上的 --ui 早就把
+   --latin 换成了具体的值，后代再改 --latin 也影响不到它。
+   所以这里直接改 --serif 与 --serif-en（真正被 font-family 用到的那两个）。
+
+   --serif-poem 一概不动：正文永远是宋体，这里比的只是西文。 */
+
+[data-font="iowan"] {
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+}
+[data-font="palatino"] {
+  --serif: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+[data-font="charter"] {
+  --serif: Charter, "Bitstream Charter", "Charis SIL", Georgia, serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: Charter, "Bitstream Charter", "Charis SIL", Georgia, serif;
+}
+[data-font="garamond"] {
+  --serif: "EB Garamond", "Adobe Garamond Pro", Garamond, Georgia, serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: "EB Garamond", "Adobe Garamond Pro", Garamond, Georgia, serif;
+}
+[data-font="spectral"] {
+  --serif: "Spectral", Georgia, serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: "Spectral", Georgia, serif;
+}
+[data-font="source"] {
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+}
+[data-font="georgia"] {
+  --serif: Georgia, "Times New Roman", serif,
+           "Songti SC", "STSong", "Noto Serif SC", "SimSun";
+  --serif-en: Georgia, "Times New Roman", serif;
+}

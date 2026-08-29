@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>诗渊 · 西文字体样张</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/fonts-preview.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+  /* 这一页自己的脚手架。样张里的字号、字距、颜色全部照搬站上的实际取值，
+     免得看着好看、装到站上却是另一回事。 */
+  body { background: #6f6a60; padding: 0 0 60px; }
+  .page-head {
+    position: sticky; top: 0; z-index: 10; background: #2b2823; color: #e8e0cf;
+    padding: 13px 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    font-family: "Songti SC", serif;
+  }
+  .page-head h1 { margin: 0; font-size: 16px; letter-spacing: 4px; font-weight: 400; }
+  .page-head p { margin: 0; font-size: 11.5px; letter-spacing: 1px; color: #a49a86; }
+  .langsw { margin-left: auto; display: flex; gap: 0; }
+  .langsw button {
+    font-family: "Songti SC", serif; font-size: 12px; letter-spacing: 2px; cursor: pointer;
+    padding: 4px 16px; border: 1px solid #4a453d; background: none; color: #d8ccb4;
+  }
+  .langsw button:first-child { border-radius: 13px 0 0 13px; border-right: none; }
+  .langsw button:last-child { border-radius: 0 13px 13px 0; }
+  .langsw button.on { background: #a8322d; border-color: #a8322d; color: #fff; }
+
+  .spec {
+    max-width: 900px; margin: 24px auto; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.32);
+    background: var(--paper); color: var(--ink);
+  }
+  .spec-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 8px 18px; background: var(--chrome-lo); color: var(--chrome-ink);
+    font-family: "Songti SC", serif; font-size: 12.5px; letter-spacing: 2px;
+  }
+  .spec-bar b { color: var(--chrome-ink-hi); font-weight: 400; }
+  .spec-bar em {
+    font-style: normal; font-size: 10.5px; letter-spacing: .5px; opacity: .65;
+  }
+  .spec-bar .where { margin-left: auto; font-size: 10px; letter-spacing: .5px; opacity: .6; }
+  .try {
+    font-family: "Songti SC", serif; font-size: 11px; letter-spacing: 2px; cursor: pointer;
+    padding: 2px 11px; border-radius: 11px; border: 1px solid var(--chrome-ink);
+    background: none; color: var(--chrome-ink-hi);
+  }
+  .try:hover, .try.on { background: var(--cinnabar); border-color: var(--cinnabar); color: #fff; }
+
+  /* 这一行是样张能生效的关键：样张里的元素本来是从 body 继承**已经算好的**
+     font-family，不会再去看局部的 --serif。必须在这里重新声明一次，
+     var(--serif) 才会用本样张 [data-font] 上的那一副。 */
+  .spec-body, .spec-body * { font-family: var(--serif); }
+  .spec-body { padding: 18px 22px 22px; }
+  .row { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+  .row:last-child { border-bottom: none; }
+  .row-tag {
+    font-family: "Songti SC", serif; font-size: 9.5px; letter-spacing: 2px;
+    color: var(--gold); opacity: .8; margin-bottom: 7px;
+  }
+
+  /* —— 以下一律用站上的真 class，字号字距照抄 —— */
+  .navline { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .navline .brandname {
+    font-family: var(--serif-poem); font-size: 19px; letter-spacing: 4px;
+    color: var(--cinnabar); font-weight: 700;
+  }
+  .navline .sub { font-size: 11px; letter-spacing: var(--track-nav); color: var(--ink-soft); }
+  .navline .tab {
+    font-size: 13px; letter-spacing: var(--track-nav); color: var(--ink-soft); padding: 4px 9px;
+  }
+  .navline .tab.on {
+    color: var(--on-accent); background: var(--cinnabar); border-radius: 4px;
+  }
+  .secs { display: flex; gap: 26px; flex-wrap: wrap; }
+  .secs span { font-size: 14px; letter-spacing: var(--track-title); color: var(--cinnabar); }
+  .foot { font-size: 11px; letter-spacing: var(--track-label); color: var(--gold); }
+  .btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    font-size: 11.5px; letter-spacing: var(--track-label); padding: 3px 12px;
+    border: 1px solid var(--line); border-radius: 12px; color: var(--ink-soft);
+  }
+  .btn.on { background: var(--cinnabar); border-color: var(--cinnabar); color: var(--on-accent); }
+  .btn.wide { border-radius: 18px; padding: 6px 20px; font-size: 12.5px; color: var(--cinnabar); }
+
+  /* 中西并置 —— 这一行是整页最要紧的：看这副西文跟宋体是不是一路人 */
+  .mixed { font-size: 13px; letter-spacing: var(--track-label); color: var(--ink-soft); }
+  .mixed .han { font-family: var(--serif-poem); letter-spacing: 2px; color: var(--ink); }
+  .mixed .lat { letter-spacing: var(--track-label); }
+
+  .prose { font-size: 13.5px; line-height: 2; color: var(--ink-soft); max-width: 62ch; }
+  .prose.en { font-family: var(--serif-en); font-style: italic; line-height: 1.9; }
+
+  .cardish {
+    display: inline-block; min-width: 250px; padding: 12px 14px;
+    background: linear-gradient(160deg, var(--paper-hi), var(--paper-lo));
+    border: 1px solid var(--line); border-radius: 5px; border-left: 3px solid var(--cinnabar);
+  }
+  .cardish .dyn { font-size: 10.5px; letter-spacing: var(--track-label); color: var(--gold); }
+  .cardish h3 {
+    font-family: var(--serif-poem); margin: 4px 0 1px;
+    font-size: 16px; letter-spacing: 1.5px; color: var(--ink);
+  }
+  .cardish .au { font-size: 11.5px; letter-spacing: var(--track-label); color: var(--ink-soft); }
+  .cardish .ex {
+    font-family: var(--serif-poem); margin-top: 7px; font-size: 13px;
+    line-height: 1.8; color: var(--ink-soft);
+  }
+  .note { font-size: 11.5px; line-height: 1.9; color: var(--ink-soft); padding-top: 4px; }
+  .note b { color: var(--cinnabar); font-weight: 400; }
+  /* 上面那条 * 会把宋体也覆盖掉，这里把正文再抢回来 */
+  .spec-body .brandname, .spec-body .han, .spec-body .cardish h3,
+  .spec-body .cardish .ex { font-family: var(--serif-poem) !important; }
+  .spec-body .row-tag { font-family: "Songti SC", serif !important; }
+  .spec-body .prose.en { font-family: var(--serif-en); }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>西文字体样张</h1>
+  <p>七副。中文一律是宋体，比的是西文用哪一副、以及它跟宋体站在一起像不像一路人。</p>
+  <nav class="langsw">
+    <button data-l="zh" class="on">中文界面</button>
+    <button data-l="en">English</button>
+  </nav>
+</div>
+
+<div id="specs"></div>
+
+<script>
+var FONTS = [
+  { k: "iowan",    n: "Iowan Old Style", where: "mac 自带",
+    note: "<b>现在站上就是这副。</b>字面宽、笔画厚，读着敦实像本书。缺点是只有苹果设备有 —— Windows 的访客一路回退到 Georgia。" },
+  { k: "palatino", n: "Palatino",        where: "mac / Windows 多半有",
+    note: "笔形带书法味，起收笔像宽头笔写的。比 Iowan 秀气，也更正式一点。" },
+  { k: "charter",  n: "Charter",         where: "mac 自带",
+    note: "最素的一副，装饰少、字距紧。想让界面退到背景里、让诗站出来，选它。" },
+  { k: "garamond", n: "EB Garamond",     where: "需自带（约 60 KB）",
+    note: "老式罗马体的经典。字身小、笔画细，数字是高低错落的旧式数字。与宋体同属「横细竖粗」一路，最像一家人。" },
+  { k: "spectral", n: "Spectral",        where: "需自带（约 70 KB）",
+    note: "为屏幕设计的衬线，字面略窄，小字号下最稳。界面里字都小，这一点是实打实的好处。" },
+  { k: "source",   n: "Source Serif 4",  where: "需自带（约 80 KB）",
+    note: "最中性、最清楚，也最没有脾气。要「不出错」选它；要「有味道」别选它。" },
+  { k: "georgia",  n: "Georgia",         where: "哪儿都有",
+    note: "各平台都有的兜底，也就是现在 Windows 访客实际看到的样子。厚实、字面大，屏幕上很耐看，只是常见到没有识别度。" }
+];
+
+var STR = {
+  zh: {
+    sub: "收录 4675 篇",
+    tabs: ["首页", "诗文库", "作者", "体裁", "主题", "字词", "时间轴", "地图", "配画"],
+    secs: ["译　文", "注　释", "赏　析", "English"],
+    foot: "文本仅供学习研究之用",
+    btns: ["卡片", "长卷", "显示更多（还有 120 篇）"],
+    mixedTag: "中西并置 —— 题署那一行",
+    proseTag: "说明文字",
+    prose: "古人炼字，一字千金。这里可循一个字走进无数诗篇 —— 看「月」如何照过千年，「风」如何吹遍江山。",
+    enTag: "英译（斜体衬线）",
+    cardTag: "卡片"
+  },
+  en: {
+    sub: "4675 works",
+    tabs: ["Home", "Library", "Poets", "Forms", "Themes", "Words", "Timeline", "Map", "With paintings"],
+    secs: ["Translation", "Notes", "Commentary", "English"],
+    foot: "Texts provided for study and research",
+    btns: ["Cards", "Handscroll", "Show more (120 remaining)"],
+    mixedTag: "Latin beside Chinese — the attribution line",
+    proseTag: "Interface prose",
+    prose: "One character at a time. Follow a single graph through the corpus — how 月 (moon) has shone for a thousand years, where 风 (wind) blows.",
+    enTag: "English rendering (italic serif)",
+    cardTag: "Card"
+  }
+};
+
+var EN_POEM = "Before my bed the bright moonlight —<br>I take it for frost upon the ground.<br>" +
+              "I lift my head and gaze at the moon,<br>then bow my head and think of home.";
+
+function esc(s) {
+  return String(s).replace(/[&<]/g, function (c) { return { "&": "&amp;", "<": "&lt;" }[c]; });
+}
+
+function spec(f, lang) {
+  var S = STR[lang];
+  var tabs = S.tabs.map(function (t, i) {
+    return '<span class="tab' + (i === 0 ? " on" : "") + '">' + esc(t) + "</span>";
+  }).join("");
+  var secs = S.secs.map(function (t) { return "<span>" + esc(t) + "</span>"; }).join("");
+  var btns = '<span class="btn on">' + esc(S.btns[0]) + "</span>" +
+             '<span class="btn">' + esc(S.btns[1]) + "</span>" +
+             '<span class="btn wide">' + esc(S.btns[2]) + "</span>";
+  // 朝代在英文界面下是拉丁词，坐在一行汉字中间 —— 全站最难看好的一行
+  var dyn = lang === "en" ? "Tang" : "唐";
+
+  return '<section class="spec" data-font="' + f.k + '">' +
+    '<div class="spec-bar"><b>' + esc(f.n) + "</b>" +
+      '<em>--latin: ' + esc(f.n) + "</em>" +
+      '<button class="try" data-set="' + f.k + '">全站试用</button>' +
+      '<span class="where">' + esc(f.where) + "</span></div>" +
+    '<div class="spec-body">' +
+
+      '<div class="row"><div class="row-tag">页眉与导航</div>' +
+        '<div class="navline"><span class="brandname">诗渊</span>' +
+        '<span class="sub">' + esc(S.sub) + "</span>" + tabs + "</div></div>" +
+
+      '<div class="row"><div class="row-tag">' + esc(S.mixedTag) + "</div>" +
+        '<div class="mixed"><span class="lat">' + dyn + '</span>　' +
+        '<span class="han">王维</span>　<span class="han">《相思》</span>' +
+        '　·　<span class="lat">' + (lang === "en" ? "five-character quatrain" : "五言绝句") +
+        "</span></div></div>" +
+
+      '<div class="row"><div class="row-tag">栏目标题</div>' +
+        '<div class="secs">' + secs + "</div></div>" +
+
+      '<div class="row"><div class="row-tag">' + esc(S.cardTag) + " · " + esc(S.proseTag) + "</div>" +
+        '<div class="cardish"><div class="dyn">' + dyn + ' · ' +
+          (lang === "en" ? "quatrain" : "五言绝句") + "</div>" +
+          '<h3>相思</h3><div class="au">' + (lang === "en" ? "Wang Wei" : "王维") + "</div>" +
+          '<div class="ex">红豆生南国，春来发几枝。</div></div>' +
+        '<div class="prose" style="margin-top:12px">' + S.prose + "</div></div>" +
+
+      '<div class="row"><div class="row-tag">' + esc(S.enTag) + "</div>" +
+        '<div class="prose en">' + EN_POEM + "</div></div>" +
+
+      '<div class="row"><div class="row-tag">按钮与页脚</div>' +
+        '<div class="btns">' + btns + "</div>" +
+        '<div class="foot" style="margin-top:12px">' + esc(S.foot) + "</div></div>" +
+
+      '<div class="row"><div class="note">' + f.note + "</div></div>" +
+    "</div></section>";
+}
+
+var lang = "zh";
+function paint() {
+  document.getElementById("specs").innerHTML =
+    FONTS.map(function (f) { return spec(f, lang); }).join("");
+  var cur = null;
+  try { cur = localStorage.getItem("font"); } catch (e) {}
+  [].forEach.call(document.querySelectorAll(".try"), function (b) {
+    var on = b.getAttribute("data-set") === (cur || "iowan");
+    b.classList.toggle("on", on);
+    b.textContent = on ? "站上正用" : "全站试用";
+  });
+}
+paint();
+
+document.addEventListener("click", function (e) {
+  var l = e.target.closest && e.target.closest(".langsw button");
+  if (l) {
+    lang = l.getAttribute("data-l");
+    /* 字距是跟着 <html lang> 走的（见 style.css 的 :root[lang="en"]）。
+       只换字串不换属性的话，英文样张会顶着汉字的字距 —— 那就看不出真样子了，
+       而字距恰恰是这件事的一半。 */
+    document.documentElement.setAttribute("lang", lang === "en" ? "en" : "zh-Hans");
+    [].forEach.call(document.querySelectorAll(".langsw button"), function (b) {
+      b.classList.toggle("on", b === l);
+    });
+    paint();
+    return;
+  }
+  var b = e.target.closest && e.target.closest(".try");
+  if (!b) return;
+  var k = b.getAttribute("data-set");
+  try {
+    if (k === "iowan") localStorage.removeItem("font");
+    else localStorage.setItem("font", k);
+  } catch (err) {}
+  paint();
+});
+</script>
+</body>
+</html>

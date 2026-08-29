@@ -9,6 +9,16 @@
        它原来是这里唯一的第三方渲染阻塞依赖，首页不为一张地图等 CDN。 -->
   <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/style.css">
+  <!-- 临时：试字体用。选定之后删掉这两行、css/fonts-preview.css、fonts.html，
+       以及下面那段读 localStorage 的脚本。见 fonts.html。 -->
+  <link rel="stylesheet" href="css/fonts-preview.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+  <script>
+    try {
+      var _f = localStorage.getItem("font");
+      if (_f) document.documentElement.setAttribute("data-font", _f);
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <!-- cross-site tab strip -->
