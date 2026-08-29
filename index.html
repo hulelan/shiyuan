@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>诗渊 · 古诗古文集</title>
   <meta name="description" content="古诗古文在线库 — 原文、拼音、译文、注释、赏析、英译，并可按朝代、作者、体裁、主题、字词、时间与地理探索。">
-  <!-- Leaflet (地图；离线时自动降级为提示) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet 不进 <head>：按需加载（首次打开地图才注入，见 js/app.js 的 loadLeaflet()）。
+       它原来是这里唯一的第三方渲染阻塞依赖，首页不为一张地图等 CDN。 -->
   <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -52,6 +52,7 @@
     <section class="view hidden" id="view-word"></section>
     <section class="view hidden" id="view-timeline"></section>
     <section class="view hidden" id="view-map"></section>
+    <section class="view hidden" id="view-art"></section>
     <section class="view hidden" id="view-search"></section>
   </main>
 
@@ -64,7 +65,6 @@
     文本仅供学习研究之用
   </footer>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
   /* 字体试装：?font=b|c|d|e 换一副无衬线，记在本机；?font=a 回到宋体。
      只改 --serif 一个变量，全站跟着走。 */

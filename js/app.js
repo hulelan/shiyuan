@@ -83,6 +83,19 @@
     return card;
   }
 
+  /* ---------- 两种读法：卡片 / 长卷 ----------
+     卡片是查检用的 —— 一眼扫过去找那一首。
+     长卷是通读用的 —— 顺着一列列往下看，像展开一卷手卷。
+     任何一个列表都该能两种读法：某个朝代的、某位作者的、某个体裁的、某个主题的。
+     选择记在 localStorage 里：一个人怎么读书，不该每换一页就重选一次。 */
+  function readMode() {
+    try { return localStorage.getItem("readMode") === "scroll" ? "scroll" : "cards"; }
+    catch (e) { return "cards"; }
+  }
+  function setReadMode(m) {
+    try { localStorage.setItem("readMode", m); } catch (e) {}
+  }
+
   var PAGE = 120;
   /* 分页渲染：一次只塞 PAGE 张，其余按需追加。
      more 是个返回 Promise<卡片数组> 的取数函数，没有下一批时返回 null。 */
@@ -120,158 +133,111 @@
     if (!list.length) host.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
   }
 
-  // ---------- 首页：多种观看方式 ----------
-  var homeOffset = 0;
-  var MODES = [
-    { k: "texture", n: "单篇" },
-    { k: "scroll", n: "长卷" },
-    { k: "album", n: "册页" },
-    { k: "moodboard", n: "Mood board" }
-  ];
-  var GRADIENTS = [
-    "linear-gradient(160deg,#e8e4dc,#d4cfc3)",
-    "linear-gradient(180deg,#cfd6d8,#8a9ba0)",
-    "linear-gradient(160deg,#e8dfe8,#c9b8c9)",
-    "linear-gradient(180deg,#d4e4e0,#4a6b5a)",
-    "linear-gradient(160deg,#e4e2dd,#b8b4a8)",
-    "linear-gradient(180deg,#d8d4c8,#6b6a5e)",
-    "linear-gradient(160deg,#f0e6e2,#d9c3bb)"
-  ];
-  function currentMode() {
-    try { return localStorage.getItem("homeMode") || "texture"; } catch (e) { return "texture"; }
+  /* 列表的外壳：一条切换 + 内容区。
+     渲染器（卡片或长卷）从同一份 cards 出发，切换时不必重新取数。 */
+  function listBody(host, cards, opts) {
+    opts = opts || {};
+    host.innerHTML = '<div class="read-switch">' +
+        '<button class="rs" data-m="cards">' + T("卡片") + '</button>' +
+        '<button class="rs" data-m="scroll">' + T("长卷") + '</button>' +
+      '</div><div class="list-body"></div>';
+    var body = $(".list-body", host);
+
+    function paint() {
+      var m = readMode();
+      host.querySelectorAll(".rs").forEach(function (b) {
+        b.classList.toggle("on", b.getAttribute("data-m") === m);
+      });
+      if (m === "scroll") renderScroll(body, cards, opts);
+      else renderCards(body, cards, opts);
+    }
+    host.querySelectorAll(".rs").forEach(function (b) {
+      b.addEventListener("click", function () {
+        setReadMode(b.getAttribute("data-m"));
+        paint();
+      });
+    });
+    paint();
   }
-  function setMode(name) {
-    try { localStorage.setItem("homeMode", name); } catch (e) {}
-    document.querySelectorAll(".home-mode").forEach(function (b) {
-      b.classList.toggle("on", b.getAttribute("data-set") === name);
+
+  /* 长卷：竖排成列，自右向左展开。
+     卡片只带首句，通读要全文 —— 所以这里得按 id 去取正文。
+     一次取 SCROLL_BATCH 首：全文分片是 200 首一片，连着的几首多半同片，
+     Store 里又有缓存，实际请求数远小于首数。 */
+  var SCROLL_BATCH = 24;
+  function renderScroll(host, cards, opts) {
+    opts = opts || {};
+    host.innerHTML =
+      '<div class="scroll-stage"><div class="scroll-case"><div class="scroll">' +
+        '<div class="roller"></div>' +
+        '<div class="scroll-paper" id="scrollPaper"></div>' +
+        '<div class="roller"></div>' +
+      '</div></div>' +
+      '<div class="scroll-hint">' + T("自右向左展卷；点一列读全篇") + '</div></div>';
+    var paper = $("#scrollPaper", host);
+    var list = cards.slice(), at = 0, busy = false;
+
+    function column(p, card) {
+      var lines = (p.text || "").split("\n");
+      var prose = isProse(p);
+      var col = el("div", "scroll-col" + (prose ? " prose" : ""));
+      col.innerHTML = '<h3>' + esc(p.title) + '</h3>' +
+        '<div class="au">' + esc(T.dyn(p.dynasty)) + ' · ' + esc(p.author) + '</div>' +
+        lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("");
+      col.addEventListener("click", function () { go("/poem/" + p.id); });
+      return col;
+    }
+
+    function loadMore() {
+      if (busy) return Promise.resolve();
+      busy = true;
+      // 卡片不够了就再抓一片索引
+      var need = at + SCROLL_BATCH - list.length;
+      var pre = (need > 0 && opts.more)
+        ? opts.more(list.length).then(function (next) {
+            if (next && next.length) list = list.concat(next);
+          })["catch"](function () {})
+        : Promise.resolve();
+      return pre.then(function () {
+        var batch = list.slice(at, at + SCROLL_BATCH);
+        at += batch.length;
+        if (!batch.length) { busy = false; return; }
+        return Promise.all(batch.map(function (c) {
+          return Store.poem(c)["catch"](function () { return null; });
+        })).then(function (poems) {
+          poems.forEach(function (p, i) { if (p) paper.appendChild(column(p, batch[i])); });
+          busy = false;
+        });
+      })["catch"](function () { busy = false; });
+    }
+
+    // 卷是从右往左看的（direction: rtl），所以"接近末尾"是 scrollLeft 趋近于负的宽度
+    paper.addEventListener("scroll", function () {
+      var left = paper.scrollWidth - Math.abs(paper.scrollLeft) - paper.clientWidth;
+      if (left < 600) loadMore();
+    });
+
+    loading(paper);
+    loadMore().then(function () {
+      var l = $(".loading", paper);
+      if (l) l.remove();
+      if (!paper.children.length) {
+        paper.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
+      }
     });
   }
-  function modeBar(cur) {
-    return '<div class="home-modes">' + MODES.map(function (m) {
-      return '<button class="home-mode' + (m.k === cur ? ' on' : '') +
-        '" data-set="' + m.k + '">' + esc(m.n) + '</button>';
-    }).join("") + '</div>';
-  }
+
+  // ---------- 首页：一日一篇 ----------
+  /* 首页只有一首诗。留白是内容的一部分 ——
+     不要往这里加统计、入口、模式切换或推荐。
+     「长卷」现在是任何列表的第二种读法（见 renderScroll / listBody），
+     「配画」是一个独立视角（见 viewArt），都不该挤在首页。 */
+  var homeOffset = 0;
 
   function poemLines(p) { return (p.text || "").split("\n"); }
   function isProse(p) {
     var lines = poemLines(p);
     return p.genre === "文" || lines.some(function (l) { return l.length > 22; });
-  }
-  function bgStyle(p, art, i) {
-    if (art) return "background-image:url('assets/art/" + esc(art.file) + "')";
-    return "background:" + GRADIENTS[(i || 0) % GRADIENTS.length];
-  }
-
-  function renderTexture(p, pic) {
-    var lines = poemLines(p);
-    var prose = isProse(p);
-    var chars = (p.text || "").replace(/\s/g, "").length;
-    var vertical = !prose && chars <= 60;
-    var verse = '<div class="daily-text' + (prose ? " prose" : "") +
-      (vertical ? " vertical" : "") + '" id="dailyText">' +
-      lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
-    var attr = '<div class="daily-attr">' + esc(p.dynasty) + '　' + esc(p.author) +
-      '　《' + esc(p.title) + '》</div>';
-    var acts = '<div class="daily-acts">' +
-      '<button class="quiet" id="dailyOpen">' + T("释　文") + '</button>' +
-      '<span class="daily-sep">·</span>' +
-      '<button class="quiet" id="dailyNext">' + T("换一篇") + '</button>' +
-      (pic ? "" : '<span class="daily-sep">·</span>' +
-        '<a class="quiet suggest-art" href="' + esc(artIssueUrl(p)) +
-        '" target="_blank" rel="noopener" title="' +
-        T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">' +
-        T("推荐一幅画") + '</a>') +
-      '</div>';
-    return '<div class="daily"><div class="daily-seal">詩淵</div>' + verse + attr + acts + '</div>';
-  }
-
-  function renderScroll(poems) {
-    var cols = poems.map(function (p) {
-      var lines = poemLines(p).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("");
-      return '<div class="scroll-col" data-id="' + esc(p.id) + '"><h3>' + esc(p.title) +
-        '</h3><div class="au">' + esc(p.author) + '</div>' + lines + '</div>';
-    }).join("");
-    return '<div class="scroll-stage"><div class="scroll-case"><div class="scroll">' +
-      '<div class="roller"></div><div class="scroll-paper" id="homeScroll">' + cols +
-      '</div><div class="roller"></div></div></div><div class="scroll-hint">' +
-      T("长卷 · 竖排 · 横向展开") + '</div></div>';
-  }
-
-  function renderAlbum(poems, artMap) {
-    var leaves = poems.map(function (p, i) {
-      var art = artMap[p.id];
-      var cap = art ? [art.dynasty, art.artist, art.title].filter(Boolean).join(" · ") : "";
-      var img = '<div class="album-img" style="' + bgStyle(p, art, i) + '">' +
-        (cap ? '<div class="album-cap">' + esc(cap) + '</div>' : "") + '</div>';
-      var lines = poemLines(p).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("");
-      var txt = '<div class="album-txt" data-id="' + esc(p.id) + '"><h3>' + esc(p.title) +
-        '</h3><div class="au">' + esc(p.author) + '</div>' + lines + '</div>';
-      return '<div class="album-leaf' + (i === 0 ? " active" : "") +
-        '" data-id="' + esc(p.id) + '">' + img + txt + '</div>';
-    }).join("");
-    var dots = poems.map(function (_, i) {
-      return '<div class="album-dot' + (i === 0 ? " active" : "") +
-        '" data-i="' + i + '"></div>';
-    }).join("");
-    return '<div class="album-stage"><div class="album-intro">' +
-      T("册页式诗画对读 · 左右翻动") + '</div><div class="album" id="homeAlbum">' + leaves +
-      '</div><div class="album-nav"><button id="albumPrev">‹ ' + T("上一页") +
-      '</button><div class="album-dots" id="albumDots">' + dots +
-      '</div><button id="albumNext">' + T("下一页") + ' ›</button></div></div>';
-  }
-
-  function renderMoodboard(poems, artMap) {
-    var cards = poems.map(function (p, i) {
-      var art = artMap[p.id];
-      var cap = art ? [art.dynasty, art.artist].filter(Boolean).join(" · ") : "";
-      var img = '<div class="mood-card-img" style="' + bgStyle(p, art, i) + '">' +
-        (cap ? '<div class="mood-card-cap">' + esc(cap) + '</div>' : "") + '</div>';
-      var excerpt = (p.text || "").replace(/\n/g, " ").slice(0, 60) + ((p.text || "").length > 60 ? "…" : "");
-      return '<div class="mood-card" data-id="' + esc(p.id) + '">' + img +
-        '<div class="mood-card-body"><h3>' + esc(p.title) + '</h3>' +
-        '<div class="au">' + esc(p.author) + '</div><p>' + esc(excerpt) + '</p></div></div>';
-    }).join("");
-    return '<div class="mood-stage"><div class="mood-intro">' +
-      T("诗画 mood board · 随手翻阅") + '</div><div class="mood-board" id="homeMood">' +
-      cards + '</div></div>';
-  }
-
-  function attachTextureEvents(p) {
-    function open() { go("/poem/" + p.id); }
-    $("#dailyText").addEventListener("click", open);
-    $("#dailyOpen").addEventListener("click", open);
-    $("#dailyNext").addEventListener("click", function () { homeOffset++; viewHome(); });
-  }
-  function attachScrollEvents() {
-    var paper = $("#homeScroll");
-    if (paper) paper.scrollLeft = paper.scrollWidth;
-    document.querySelectorAll(".scroll-col").forEach(function (c) {
-      c.addEventListener("click", function () { go("/poem/" + c.getAttribute("data-id")); });
-    });
-  }
-  function attachAlbumEvents() {
-    var leaves = document.querySelectorAll(".album-leaf");
-    var dots = document.querySelectorAll(".album-dot");
-    var cur = 0;
-    function albumGo(i) {
-      cur = (i + leaves.length) % leaves.length;
-      leaves.forEach(function (l, idx) { l.classList.toggle("active", idx === cur); });
-      dots.forEach(function (d, idx) { d.classList.toggle("active", idx === cur); });
-    }
-    $("#albumPrev").addEventListener("click", function () { albumGo(cur - 1); });
-    $("#albumNext").addEventListener("click", function () { albumGo(cur + 1); });
-    dots.forEach(function (d) {
-      d.addEventListener("click", function () { albumGo(+d.getAttribute("data-i")); });
-    });
-    document.querySelectorAll(".album-txt").forEach(function (t) {
-      t.addEventListener("click", function () { go("/poem/" + t.getAttribute("data-id")); });
-    });
-  }
-  function attachMoodboardEvents() {
-    document.querySelectorAll(".mood-card").forEach(function (c) {
-      c.addEventListener("click", function () { go("/poem/" + c.getAttribute("data-id")); });
-    });
   }
 
   function viewHome() {
@@ -281,33 +247,66 @@
       if (!ok()) return;
       var pool = res[0], art = res[1] || [];
       if (!pool.length) return failed(host, new Error("精编集为空"));
-      var mode = currentMode();
       var artMap = {};
       art.forEach(function (a) { artMap[a.poem] = a; });
 
-      var bar = modeBar(mode);
-      var body;
-      if (mode === "scroll") body = renderScroll(pool.slice(0, 20));
-      else if (mode === "album") body = renderAlbum(pool.slice(0, 12), artMap);
-      else if (mode === "moodboard") body = renderMoodboard(pool.slice(0, 20), artMap);
-      else {
-        var day = Math.floor(Date.now() / 86400000);
-        var p = pool[(day + homeOffset) % pool.length];
-        body = renderTexture(p, artMap[p.id]);
+      var day = Math.floor(Date.now() / 86400000);
+      var p = pool[(day + homeOffset) % pool.length];
+      var pic = artMap[p.id];
+
+      var lines = poemLines(p);
+      var prose = isProse(p);
+      var chars = (p.text || "").replace(/\s/g, "").length;
+      // 竖排只用在短篇上：长调竖排会溢出，横排反而稳当
+      var vertical = !prose && chars <= 60;
+
+      var verse = '<div class="daily-text' + (prose ? " prose" : "") +
+        (vertical ? " vertical" : "") + '" id="dailyText">' +
+        lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
+      var attr = '<div class="daily-attr">' +
+        '<span class="attr-dyn">' + esc(T.dyn(p.dynasty)) + '</span>　' + esc(p.author) +
+        '　《' + esc(p.title) + '》</div>';
+      var acts = '<div class="daily-acts">' +
+        '<button class="quiet" id="dailyOpen">' + T("释　文") + '</button>' +
+        '<span class="daily-sep">·</span>' +
+        '<button class="quiet" id="dailyNext">' + T("换一篇") + '</button>' +
+        (pic ? "" : '<span class="daily-sep">·</span>' +
+          '<a class="quiet suggest-art" href="' + esc(artIssueUrl(p)) +
+          '" target="_blank" rel="noopener" title="' +
+          T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">' +
+          T("推荐一幅画") + '</a>') +
+        '</div>';
+
+      host.className = "view";
+      if (pic) {
+        host.innerHTML = '<div class="daily paired">' + artFigure(pic) +
+          '<div class="daily-words"><div class="daily-seal">詩淵</div>' +
+          verse + attr + acts + '</div></div>';
+      } else {
+        host.innerHTML = '<div class="daily"><div class="daily-seal">詩淵</div>' +
+          verse + attr + acts + '</div>';
       }
 
-      host.className = "view mode-" + mode;
-      host.innerHTML = bar + body;
-
-      document.querySelectorAll(".home-mode").forEach(function (b) {
-        b.addEventListener("click", function () { setMode(b.getAttribute("data-set")); viewHome(); });
-      });
-
-      if (mode === "texture") attachTextureEvents(p);
-      else if (mode === "scroll") attachScrollEvents();
-      else if (mode === "album") attachAlbumEvents();
-      else if (mode === "moodboard") attachMoodboardEvents();
+      function open() { go("/poem/" + p.id); }
+      $("#dailyText").addEventListener("click", open);
+      $("#dailyOpen").addEventListener("click", open);
+      $("#dailyNext").addEventListener("click", function () { homeOffset++; viewHome(); });
     })["catch"](function (e) { if (ok()) failed(host, e); });
+  }
+
+  /* 画的那一半版式。首页与「配画」视角共用，免得两处各写一遍、日后各改各的。 */
+  function artFigure(pic) {
+    var cap = [pic.dynasty, pic.artist].filter(Boolean).join(" ") +
+      (pic.title ? '《' + pic.title + '》' : "");
+    var credit = pic.credit
+      ? (pic.link ? '<a href="' + esc(pic.link) + '" target="_blank" rel="noopener">' +
+          esc(pic.credit) + '</a>' : esc(pic.credit))
+      : "";
+    return '<figure class="daily-art">' +
+      '<img src="assets/art/' + esc(pic.file) + '" alt="' + esc(cap) + '" loading="lazy"' +
+        (pic.w && pic.h ? ' width="' + pic.w + '" height="' + pic.h + '"' : "") + '>' +
+      '<figcaption>' + esc(cap) + (credit ? '<span>' + credit + '</span>' : "") +
+      '</figcaption></figure>';
   }
 
   // ---------- 诗文库 ----------
@@ -345,7 +344,7 @@
     }
     nextShard().then(function (first) {
       if (!ok()) return;
-      renderCards(body, first || [], { total: total, more: function () { return nextShard(); } });
+      listBody(body, first || [], { total: total, more: function () { return nextShard(); } });
     })["catch"](function (e) { if (ok()) failed(body, e); });
   }
 
@@ -439,7 +438,7 @@
           }).join("") + '</div></div>' : "") +
         '<h4 class="ap-works-h">' + T("作品") + '</h4><div id="authorWorks"></div>';
 
-      renderCards($("#authorWorks"), works, {});
+      listBody($("#authorWorks"), works, {});
       $("#authorBack").addEventListener("click", function () { go("/authors"); });
       host.querySelectorAll("[data-theme]").forEach(function (b) {
         b.addEventListener("click", function () { goThemeByName(b.getAttribute("data-theme")); });
@@ -506,7 +505,7 @@
       var fetchOne = function () { return meta._cards(k++); };
       fetchOne().then(function (first) {
         if (!ok()) return;
-        renderCards(body, first || [], {
+        listBody(body, first || [], {
           total: meta.c,
           more: function () { return (k < (meta.s || 1)) ? fetchOne() : Promise.resolve(null); }
         });
@@ -667,6 +666,30 @@
      这些篇目在全览里照样在。 */
   var BUCKET = 50;
   var map = null, mapLayer = null, mapDone = false;
+  var leafletPromise = null;
+
+  /* Leaflet 按需加载：地图只是众多视角之一，首页不为它拖整份 CDN 资源
+     （它原本还是 <head> 里唯一的第三方渲染阻塞依赖）。
+     首次打开地图才注入 CSS + JS；加载失败 = 离线，走降级提示。 */
+  function loadLeaflet() {
+    if (typeof L !== "undefined") return Promise.resolve();
+    if (leafletPromise) return leafletPromise;
+    leafletPromise = new Promise(function (resolve, reject) {
+      var css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(css);
+      var s = document.createElement("script");
+      s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      s.onload = function () { resolve(); };
+      s.onerror = function () {
+        leafletPromise = null;      // 失败不留缓存：下次打开地图会重试（跟 store.js 同一套做法）
+        reject(new Error("Leaflet 未能加载"));
+      };
+      document.head.appendChild(s);
+    });
+    return leafletPromise;
+  }
 
   function viewMap() {
     var host = $("#view-map"), ok = guard();
@@ -674,16 +697,21 @@
     host.innerHTML = '<div id="mapCanvas"></div>' +
       '<div class="map-time" id="mapTime"></div>' +
       '<p class="map-note" id="mapNote"></p>';
-    if (typeof L === "undefined") {
-      $("#mapCanvas").innerHTML = '<div class="map-fallback">' +
-        T("地图组件需要联网加载（Leaflet / OpenStreetMap）。") + '<br>' +
-        T("连上网络后刷新页面即可查看诗文的地理分布。") + '<br>' +
-        T("其余功能均可离线使用。") + '</div>';
-      return;
-    }
     $("#mapNote").textContent = T("取书中…");
-    Store.places().then(function (places) {
+    loadLeaflet()["catch"](function () { return null; }).then(function () {
       if (!ok()) return;
+      if (typeof L === "undefined") {
+        // 离线或 CDN 不可达：降级为提示，不拦着其余功能
+        $("#mapCanvas").innerHTML = '<div class="map-fallback">' +
+          T("地图组件需要联网加载（Leaflet / OpenStreetMap）。") + '<br>' +
+          T("连上网络后刷新页面即可查看诗文的地理分布。") + '<br>' +
+          T("其余功能均可离线使用。") + '</div>';
+        $("#mapNote").textContent = "";
+        return;
+      }
+      return Store.places();
+    }).then(function (places) {
+      if (!ok() || !places) return;
       mapDone = true;
       map = L.map("mapCanvas", { scrollWheelZoom: true }).setView([33.5, 112.5], 4);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -795,6 +823,54 @@
         (undated ? '<br><small class="caveat">' +
           T("另有 {n} 篇只知朝代、不知确年，按年筛选时不计入。", { n: undated }) +
           '</small>' : "");
+    })["catch"](function (e) { if (ok()) failed(host, e); });
+  }
+
+  /* ---------- 配画 ----------
+     不是又一种"切分诗的办法"（那是朝代、体裁、主题在做的事），
+     而是一处收拢：凡是配过画的，都在这儿。
+     配画永远只会是少数 —— 所以这一栏不该按"还差多少"来看，
+     它本身就是一个小小的画诗合集。 */
+  function viewArt() {
+    var host = $("#view-art"), ok = guard();
+    loading(host);
+    Promise.all([Store.art(), Store.curated()]).then(function (res) {
+      if (!ok()) return;
+      var art = res[0] || [];
+      if (!art.length) {
+        host.innerHTML = '<p class="empty">' + T("还没有配过画的作品。") + '</p>';
+        return;
+      }
+      host.innerHTML = '<p class="art-count"></p><div class="art-list" id="artList"></div>';
+      return Promise.all(art.map(function (a) {
+        return Store.poemById(a.poem)
+          .then(function (p) { return p ? { a: a, p: p } : null; })
+          ["catch"](function () { return null; });
+      })).then(function (rows) {
+        if (!ok()) return;
+        rows = rows.filter(Boolean);
+        $(".art-count", host).textContent = T("共 {n} 篇配了画", { n: rows.length });
+        var list = $("#artList", host);
+        rows.forEach(function (r) {
+          var p = r.p, lines = (p.text || "").split("\n");
+          var chars = (p.text || "").replace(/\s/g, "").length;
+          var vertical = !isProse(p) && chars <= 60;
+          var item = el("div", "art-item");
+          item.innerHTML = artFigure(r.a) +
+            '<div class="art-words">' +
+              '<div class="daily-text' + (vertical ? " vertical" : " prose") + '">' +
+              lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>' +
+              '<div class="daily-attr">' +
+              '<span class="attr-dyn">' + esc(T.dyn(p.dynasty)) + '</span>　' + esc(p.author) +
+              '　《' + esc(p.title) + '》</div>' +
+            '</div>';
+          item.addEventListener("click", function (e) {
+            if (e.target.closest("figcaption a")) return;   // 出处链接照常跳走
+            go("/poem/" + p.id);
+          });
+          list.appendChild(item);
+        });
+      });
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
@@ -976,7 +1052,7 @@
 
   // ---------- 路由 ----------
   var VIEWS = ["home", "library", "authors", "author", "type", "theme",
-               "word", "timeline", "map", "search"];
+               "word", "timeline", "map", "art", "search"];
   function show(v) {
     VIEWS.forEach(function (n) { $("#view-" + n).classList.toggle("hidden", n !== v); });
     document.querySelectorAll("#viewTabs > button[data-view]").forEach(function (b) {
@@ -1027,6 +1103,7 @@
       case "word":     show("word");     return viewWord(parts[1]);
       case "timeline": show("timeline"); return viewTimeline();
       case "map":      show("map");      return viewMap();
+      case "art":      show("art");      return viewArt();
       case "search":   show("search");   return viewSearch(parts.slice(1).join("/"));
       default:         show("home");     return viewHome();
     }
@@ -1043,7 +1120,8 @@
     { k: "theme",    n: "主题",    d: "送别、思乡、田园" },
     { k: "word",     n: "字词",    d: "循一个字走进诗篇" },
     { k: "timeline", n: "时间轴",  d: "沿年份看诗体流变" },
-    { k: "map",      n: "地图",    d: "诗写在哪一片土地上" }
+    { k: "map",      n: "地图",    d: "诗写在哪一片土地上" },
+    { k: "art",      n: "配画",    d: "配过画的那些篇" }
   ];
   var TAB_LABEL = { home: "首页" };
   LENSES.forEach(function (l) { TAB_LABEL[l.k] = l.n; });

@@ -14,6 +14,16 @@ window.T = (function () {
   var LANG = "zh";
   try { LANG = localStorage.getItem("lang") === "en" ? "en" : "zh"; } catch (e) {}
 
+  /* 立刻把语言写到 <html lang> 上。
+     这一行是英文界面好不好看的关键：CSS 里那批 html[lang="en"] 的规则
+     （字距、字体、行高）全靠这个属性挂上。从前只有点切换按钮时才设，
+     刷新之后属性又回到 zh-Hans —— 规则一条都不生效，英文于是照旧按
+     汉字的字距去排，词全散了。改动一行，症状全消。 */
+  function syncLang() {
+    document.documentElement.setAttribute("lang", LANG === "en" ? "en" : "zh-Hans");
+  }
+  syncLang();
+
   var EN = {
     /* ---- 页眉 / 导航 ---- */
     "古诗古文 · 溯源": "Classical Chinese Poetry",
@@ -35,6 +45,15 @@ window.T = (function () {
     "循一个字走进诗篇": "Follow a single character",
     "沿年份看诗体流变": "How the forms changed over time",
     "诗写在哪一片土地上": "Where the poems were written",
+    "配画": "With paintings",
+    "配过画的那些篇": "The ones that have a painting",
+
+    /* ---- 两种读法 ---- */
+    "卡片": "Cards",
+    "长卷": "Handscroll",
+    "自右向左展卷；点一列读全篇": "Unrolls right to left; click a column to read it whole",
+    "共 {n} 篇配了画": "{n} works have a painting",
+    "还没有配过画的作品。": "No work has a painting yet.",
     "搜索标题或作者…": "Search titles or poets…",
     "文本仅供学习研究之用": "Texts provided for study and research",
 
@@ -183,7 +202,7 @@ window.T = (function () {
       if (LANG === "zh") localStorage.removeItem("lang");
       else localStorage.setItem("lang", "en");
     } catch (e) {}
-    document.documentElement.setAttribute("lang", LANG === "en" ? "en" : "zh-Hans");
+    syncLang();
   };
   /* 朝代名。英文界面下给转写，中文界面下原样返回。 */
   T.dyn = function (name) {
