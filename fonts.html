@@ -27,6 +27,53 @@
   .langsw button:last-child { border-radius: 0 13px 13px 0; }
   .langsw button.on { background: #a8322d; border-color: #a8322d; color: #fff; }
 
+  /* ---- 顶上的速比条 ----
+     七副字铺在一起、排同一串词，是最容易比出高下的看法：
+     眼睛不必在七段样张之间来回滚，一行行往下扫就行。
+     下面那七段完整样张留着 —— 定下两三副候选之后，再去那儿看细节。 */
+  .quick {
+    max-width: 900px; margin: 22px auto 30px; background: var(--paper);
+    border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.32); overflow: hidden;
+  }
+  .quick-ctl {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 18px; background: var(--chrome-lo);
+    font-family: "Songti SC", serif; font-size: 11.5px; letter-spacing: 2px;
+    color: var(--chrome-ink);
+  }
+  .quick-ctl .seg { display: flex; }
+  .quick-ctl .seg button {
+    font-family: "Songti SC", serif; font-size: 11px; letter-spacing: 1.5px;
+    padding: 3px 10px; cursor: pointer;
+    border: 1px solid #4a453d; border-right: none; background: none; color: var(--chrome-ink);
+  }
+  .quick-ctl .seg button:last-child { border-right: 1px solid #4a453d; }
+  .quick-ctl .seg button.on { background: var(--cinnabar); border-color: var(--cinnabar); color: #fff; }
+  .quick-ctl .sz { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .quick-ctl input[type=range] { width: 150px; accent-color: var(--cinnabar); cursor: pointer; }
+  .quick-ctl .szval { font-size: 10.5px; opacity: .7; min-width: 34px; }
+
+  .qrow {
+    display: flex; align-items: baseline; gap: 14px;
+    padding: 11px 18px; cursor: pointer;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+    transition: background .14s;
+  }
+  .qrow:last-child { border-bottom: none; }
+  .qrow:hover { background: color-mix(in srgb, var(--cinnabar) 5%, transparent); }
+  .qrow.using { background: color-mix(in srgb, var(--jade) 8%, transparent); }
+  .qname {
+    font-family: "Songti SC", serif; font-size: 10px; letter-spacing: 1px;
+    color: var(--gold); flex: none; width: 108px; text-align: right;
+  }
+  .qrow.using .qname { color: var(--jade); }
+  /* 这一行必须重新声明 font-family，才会用本行 [data-font] 上的 --serif */
+  .qtext {
+    font-family: var(--serif); color: var(--ink);
+    letter-spacing: var(--track-nav); line-height: 1.5;
+  }
+  .qtext .han { font-family: var(--serif-poem); letter-spacing: 2px; }
+
   .spec {
     max-width: 900px; margin: 24px auto; border-radius: 6px; overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,.32);
@@ -126,6 +173,21 @@
     <button data-l="zh" class="on">中文界面</button>
     <button data-l="en">English</button>
   </nav>
+</div>
+
+<div class="quick">
+  <div class="quick-ctl">
+    <span>排这一串：</span>
+    <span class="seg" id="quickPick">
+      <button data-s="nav" class="on">页名</button>
+      <button data-s="secs">栏目</button>
+      <button data-s="attr">题署</button>
+      <button data-s="line">句子</button>
+    </span>
+    <span class="sz">字号<input type="range" id="quickSize" min="11" max="30" value="15">
+      <span class="szval" id="quickSizeVal">15px</span></span>
+  </div>
+  <div id="quickRows"></div>
 </div>
 
 <div id="specs"></div>
@@ -232,6 +294,36 @@ function spec(f, lang) {
     "</div></section>";
 }
 
+/* 速比条排的四串。都是站上真有的字：
+   页名是最常看见的，题署是中西挨着的那一行 —— 两处最见分晓。 */
+function quickText(kind, lang) {
+  var S = STR[lang];
+  if (kind === "nav")  return S.tabs.join("　　");
+  if (kind === "secs") return S.secs.join("　　");
+  if (kind === "attr") {
+    return (lang === "en" ? "Tang" : "唐") + "　<span class=\"han\">王维</span>　" +
+           "<span class=\"han\">《相思》</span>　·　" +
+           (lang === "en" ? "five-character quatrain" : "五言绝句");
+  }
+  return lang === "en"
+    ? "Before my bed the bright moonlight — I take it for frost upon the ground."
+    : "古人炼字，一字千金。循一个字走进无数诗篇。";
+}
+
+var quickKind = "nav", quickSize = 15;
+function paintQuick() {
+  var cur = null;
+  try { cur = localStorage.getItem("font"); } catch (e) {}
+  cur = cur || "iowan";
+  document.getElementById("quickRows").innerHTML = FONTS.map(function (f) {
+    return '<div class="qrow' + (f.k === cur ? " using" : "") + '" data-font="' + f.k +
+      '" data-set="' + f.k + '">' +
+      '<span class="qname">' + esc(f.n) + "</span>" +
+      '<span class="qtext" style="font-size:' + quickSize + 'px">' +
+        quickText(quickKind, lang) + "</span></div>";
+  }).join("");
+}
+
 var lang = "zh";
 function paint() {
   document.getElementById("specs").innerHTML =
@@ -258,6 +350,29 @@ document.addEventListener("click", function (e) {
       b.classList.toggle("on", b === l);
     });
     paint();
+    paintQuick();
+    return;
+  }
+  // 速比条：点一行就整站试用这一副
+  var q = e.target.closest && e.target.closest(".qrow");
+  if (q) {
+    var qk = q.getAttribute("data-set");
+    try {
+      if (qk === "iowan") localStorage.removeItem("font");
+      else localStorage.setItem("font", qk);
+    } catch (err) {}
+    paint();
+    paintQuick();
+    return;
+  }
+  // 换排哪一串
+  var pk = e.target.closest && e.target.closest("#quickPick button");
+  if (pk) {
+    quickKind = pk.getAttribute("data-s");
+    [].forEach.call(document.querySelectorAll("#quickPick button"), function (b) {
+      b.classList.toggle("on", b === pk);
+    });
+    paintQuick();
     return;
   }
   var b = e.target.closest && e.target.closest(".try");
@@ -268,7 +383,20 @@ document.addEventListener("click", function (e) {
     else localStorage.setItem("font", k);
   } catch (err) {}
   paint();
+  paintQuick();
 });
+
+/* 字号滑块。只改已渲染那几行的 font-size，不整块重排 —— 拖动时要跟手。 */
+var szEl = document.getElementById("quickSize");
+szEl.addEventListener("input", function () {
+  quickSize = +this.value;
+  document.getElementById("quickSizeVal").textContent = quickSize + "px";
+  [].forEach.call(document.querySelectorAll(".qtext"), function (t) {
+    t.style.fontSize = quickSize + "px";
+  });
+});
+
+paintQuick();
 </script>
 </body>
 </html>
