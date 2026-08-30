@@ -37,7 +37,7 @@ window.T = (function () {
     "时间轴": "Timeline",
     "地图": "Map",
     /* 顶栏的下拉。每一项带一句说明，展开时才看得到 */
-    "更多视角": "Other ways in",
+    "更多视角": "Perspectives",
     "按朝代翻卡片": "Browse by dynasty",
     "一人一生的笔墨": "A poet's whole hand",
     "四言、律诗、词、曲": "Four-character verse, regulated verse, ci, qu",

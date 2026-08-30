@@ -39,11 +39,13 @@
 
      为什么西文选衬线而不是系统无衬线：这是一个古籍站，正文是宋体。
      界面全换成 SF Pro 一类的系统无衬线，等于给一卷手卷配了个 App 边框 ——
-     英文是不难看了，但整站的声气散了。Iowan Old Style / Charter / Palatino
-     都是 mac 自带的老式衬线，笔形与宋体同源（都是横细竖粗、有脚），
-     摆在一起是一路人；Georgia 是各平台都有的兜底。 */
-  --latin: "Iowan Old Style", "Palatino Linotype", Palatino, Charter,
-           Georgia, "Times New Roman", serif;
+     英文是不难看了，但整站的声气散了。
+
+     选定 Spectral（自托管，见 css/fonts.css）。它是为屏幕画的衬线，
+     字面略窄、笔画匀，界面里那些 11–14px 的小字最吃这一点。
+     从前用 Iowan Old Style 是只有苹果设备才有的，Windows 的访客一路
+     回退到 Georgia —— 等于两拨人看的是两个站。自托管之后哪儿都一样。 */
+  --latin: "Spectral", Georgia, "Times New Roman", serif;
   --han:   "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
 
   --ui:        var(--latin), var(--han);   /* 界面：导航、按钮、说明 */
@@ -310,7 +312,15 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 }
 .pd-poem { text-align: center; padding: 22px 0 6px; }
 .pd-line { margin: 4px 0; }
-.pd-line .py { display: block; font-size: 10.5px; color: var(--gold); letter-spacing: 1px; margin-bottom: 1px; height: 14px; }
+/* 拼音是拉丁字母，必须用西文那副排 —— 它长在 .pd-poem 里，
+   而 .pd-poem 是宋体；不特意夺回来的话，每一首诗的注音都由宋体自带的
+   那副拉丁字母来排，正是我们要治的那个毛病。
+   声调符号（ǎ ē ǚ）在 latin-ext 一档，css/fonts.css 已经带上了。 */
+.pd-line .py {
+  display: block; font-family: var(--serif-en);
+  font-size: 10.5px; color: var(--gold);
+  letter-spacing: var(--track-label); margin-bottom: 1px; height: 14px;
+}
 .pd-line .zh { font-size: 19px; letter-spacing: 3px; color: var(--ink); line-height: 1.65; }
 .pd-poem.no-pinyin .py { display: none; }
 
