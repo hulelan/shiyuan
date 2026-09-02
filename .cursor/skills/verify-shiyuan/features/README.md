@@ -20,7 +20,7 @@ Not mapped as user features (do not spend a proof run here unless the change is 
 
 Canonical poems (from `data/site/curated.json` on the instance, not from memory):
 
-- 《关雎》 `aec36ff73546` first line `关关雎鸠，在河之洲。`
+- 《关雎》 `aec36ff73546` — first `#pdPoem .zh` line `关关雎鸠，在河之洲。窈窕淑女，君子好逑。`
 - 《静夜思》 `6c1f9747d167` 李白
 
 If those ids are missing from curated.json, fail the run. Do not invent a replacement poem.

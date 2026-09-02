@@ -48,13 +48,12 @@ fi
 if [[ ! -e "$SCRATCH/node_modules/playwright-core/package.json" ]]; then
   mkdir -p "$SCRATCH"
   echo "drive-shiyuan: installing playwright-core into $SCRATCH (not committed)"
-  (
-    cd "$SCRATCH"
-    if [[ ! -f package.json ]]; then
-      npm init -y >/dev/null 2>&1
-    fi
-    npm install --no-fund --no-audit playwright-core
-  )
+  # Do not `npm init` here: this directory is named .scratch, and npm init -y
+  # infers an illegal package name. Write a private manifest instead.
+  if [[ ! -f "$SCRATCH/package.json" ]]; then
+    printf '%s\n' '{"name":"shiyuan-verify-scratch","private":true,"version":"0.0.0"}' > "$SCRATCH/package.json"
+  fi
+  ( cd "$SCRATCH" && npm install --no-fund --no-audit playwright-core )
 fi
 
 export NODE_PATH="$SCRATCH/node_modules${NODE_PATH:+:$NODE_PATH}"

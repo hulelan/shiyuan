@@ -1,6 +1,6 @@
 # Poem detail overlay
 
-The reader path for a full work is a modal overlay, not a `#view-*`. `route()` on `#/poem/<id>` calls `openPoem(id)` and returns without `show()`. Data comes from `Store.poemById`: `data/site/lookup/<bucket>.json` then `data/site/body/<slug>-<nnn>.json`. For checkout proof, use curated id `aec36ff73546` 《关雎》 and compare `#pdPoem` to the same id in `data/site/curated.json` served by **this** instance. The first 原文 line in this checkout is `关关雎鸠，在河之洲。` — if the file says otherwise, believe the file, never a remembered variant.
+The reader path for a full work is a modal overlay, not a `#view-*`. `route()` on `#/poem/<id>` calls `openPoem(id)` and returns without `show()`. Data comes from `Store.poemById`: `data/site/lookup/<bucket>.json` then `data/site/body/<slug>-<nnn>.json` (URLs get `?v=<manifest.build>` after boot). For checkout proof, use curated id `aec36ff73546` 《关雎》 and compare `#pdPoem` to the same id in `data/site/curated.json` served by **this** instance. The first `.zh` line in this checkout is `关关雎鸠，在河之洲。窈窕淑女，君子好逑。` — if the file says otherwise, believe the file, never a remembered variant.
 
 ## Sub-features
 
@@ -41,7 +41,7 @@ Preconditions:
 ## Gotchas
 
 - `#/poem/<id>` does **not** add `.hidden` to `#view-home` via `show()` — on a cold load the home section may still be in the DOM without `.hidden` while the overlay sits on top. Assert overlay state, not “home is hidden”.
-- Proof id is `aec36ff73546`. Title in data is **关雎**, first line **关关雎鸠，在河之洲。** Do not “correct” graphs from memory.
+- Proof id is `aec36ff73546`. Title in data is **关雎**. First `.zh` line is the full first stanza (`关关雎鸠，在河之洲。窈窕淑女，君子好逑。`), not a single couplet. Do not “correct” graphs from memory.
 - `佚名` means no `#pdAuthor`.
 - `#pyToggle` exists only when pinyin line count equals text line count.
 - Empty translation/notes render `— 待补充 —`; 关雎 is curated and has those fields — assert they are real text from curated.json, not the placeholder.

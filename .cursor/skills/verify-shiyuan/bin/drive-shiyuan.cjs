@@ -188,8 +188,9 @@ async function drivePoemDetail(page, origin, curated) {
     text: rec.text, pinyin: rec.pinyin,
   }, null, 2));
 
-  const lookedUp = network.some((n) => /\/data\/site\/lookup\/\d+\.json$/.test(n.url) && n.ok);
-  const bodyHit = network.some((n) => /\/data\/site\/body\/.+\.json/.test(n.url) && n.ok);
+  // Store.get() appends ?v=<manifest.build> after boot; do not require $ end.
+  const lookedUp = network.some((n) => /\/data\/site\/lookup\/\d+\.json/.test(n.url) && n.ok);
+  const bodyHit = network.some((n) => /\/data\/site\/body\/[^?]+\.json/.test(n.url) && n.ok);
   const manHit = network.some((n) => n.url.includes("/data/site/manifest.json") && n.ok);
   if (!lookedUp) errors.push("no successful fetch of data/site/lookup/*.json");
   if (!bodyHit) errors.push("no successful fetch of data/site/body/*.json");
@@ -199,6 +200,8 @@ async function drivePoemDetail(page, origin, curated) {
     write("COMPARE_FAIL.txt", errors.join("\n") + "\n");
     die("poem-detail assertions failed:\n  " + errors.join("\n  "));
   }
+  const failNote = path.join(EVIDENCE, "COMPARE_FAIL.txt");
+  if (fs.existsSync(failNote)) fs.unlinkSync(failNote);
   const notes = [
     `feature: poem-detail`,
     `url: ${url}`,

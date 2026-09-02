@@ -90,7 +90,7 @@ Harness: Playwright against the recorded origin (`bin/drive-shiyuan`). Do not ca
 .cursor/skills/verify-shiyuan/bin/drive-shiyuan "$RUN_ID" poem-detail
 ```
 
-First run installs `playwright-core` into `.cursor/skills/verify-shiyuan/.scratch/` (gitignored) and uses machine Chrome (`/usr/local/bin/google-chrome` when present) with `--no-sandbox`. That is the only Playwright install this project needs; do not add a repo-root `package.json`.
+First run installs `playwright-core` into `.cursor/skills/verify-shiyuan/.scratch/` (gitignored) and uses machine Chrome (`/usr/local/bin/google-chrome` when present) with `--no-sandbox`. That is the only Playwright install this project needs; do not add a repo-root `package.json`. Do **not** `npm init -y` inside `.scratch/` — npm infers an illegal package name from the leading dot. The wrapper writes `{"name":"shiyuan-verify-scratch","private":true}` and runs `npm install --no-fund --no-audit playwright-core`.
 
 Feature files (selectors, hashes, gotchas) live in `features/`. The first proof on a new checkout is **poem-detail** via deep link `#/poem/aec36ff73546`.
 
@@ -149,7 +149,7 @@ Feature files (selectors, hashes, gotchas) live in `features/`. The first proof 
 
 **Cards:** `div.card` click → `#/poem/<id>`. `.author-link` `stopPropagation` → `#/author/<name>`.
 
-**Overlay:** `#overlay` (`.hidden` when closed), `#poemDetail`, `#closeDetail`, `#pdPoem`, `.pd-line` `.py` / `.zh`, `#pyToggle`, `.pd-sec` / `.pd-sec-head` `h4` labels `译　文` `注　释` `赏　析` `English`. Canonical proof poem: **《关雎》** id `aec36ff73546`, first line **`关关雎鸠，在河之洲。`** from `data/site/curated.json` (author `佚名`, so `#pdAuthor` is absent). Also curated: 《静夜思》 `6c1f9747d167` 李白.
+**Overlay:** `#overlay` (`.hidden` when closed), `#poemDetail`, `#closeDetail`, `#pdPoem`, `.pd-line` `.py` / `.zh`, `#pyToggle`, `.pd-sec` / `.pd-sec-head` `h4` labels `译　文` `注　释` `赏　析` `English`. Canonical proof poem: **《关雎》** id `aec36ff73546` from `data/site/curated.json` (author `佚名`, so `#pdAuthor` is absent). First `#pdPoem .zh` line in this checkout is `关关雎鸠，在河之洲。窈窕淑女，君子好逑。` (诗经 stanzas are stored as newline-separated *pairs* of couplets — assert against the file, including the 雎鸠 graphs). Also curated: 《静夜思》 `6c1f9747d167` 李白.
 
 **Read mode:** `.rs[data-m=cards|scroll]` inside list shells; `localStorage.readMode`.
 
