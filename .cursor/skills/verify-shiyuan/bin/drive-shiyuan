@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# drive-shiyuan — Playwright harness against a control-shiyuan instance.
+# Installs playwright-core into this skill's .scratch/ (gitignored). Uses the
+# machine Chrome when present so we do not download a second browser.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRATCH="$SKILL_DIR/.scratch"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  drive-shiyuan [RUN_ID] <feature>
+
+Features: poem-detail | home | library | search | authors
+
+Requires a run launched by control-shiyuan. Writes evidence to
+  .cursor/skills/verify-shiyuan/evidence/$RUN_ID/
+EOF
+}
+
+RUN_ID=""
+FEATURE=""
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -eq 1 ]]; then
+  FEATURE="$1"
+elif [[ $# -ge 2 ]]; then
+  RUN_ID="$1"
+  FEATURE="$2"
+else
+  usage
+  exit 2
+fi
+
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="${SHIYUAN_RUN_ID:-}"
+fi
+if [[ -z "$RUN_ID" ]]; then
+  latest="$(ls -1dt "$SKILL_DIR/.run"/*/ 2>/dev/null | head -n1 || true)"
+  [[ -n "$latest" ]] || { echo "drive-shiyuan: launch first" >&2; exit 1; }
+  RUN_ID="$(basename "${latest%/}")"
+fi
+
+if [[ ! -e "$SCRATCH/node_modules/playwright-core/package.json" ]]; then
+  mkdir -p "$SCRATCH"
+  echo "drive-shiyuan: installing playwright-core into $SCRATCH (not committed)"
+  (
+    cd "$SCRATCH"
+    if [[ ! -f package.json ]]; then
+      npm init -y >/dev/null 2>&1
+    fi
+    npm install --no-fund --no-audit playwright-core
+  )
+fi
+
+export NODE_PATH="$SCRATCH/node_modules${NODE_PATH:+:$NODE_PATH}"
+export SHIYUAN_RUN_ID="$RUN_ID"
+export SHIYUAN_SKILL_DIR="$SKILL_DIR"
+exec node "$SCRIPT_DIR/drive-shiyuan.cjs" "$RUN_ID" "$FEATURE"
