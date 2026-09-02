@@ -60,6 +60,8 @@ python3 -m http.server 8731
 # 浏览器访问 http://127.0.0.1:8731/
 ```
 
+本地核对界面：见 `.cursor/skills/verify-shiyuan/SKILL.md`。
+
 如需运行数据管线（导入 / 生成内容），先建 Python 环境：
 
 ```bash
