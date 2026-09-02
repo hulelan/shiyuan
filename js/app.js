@@ -66,8 +66,6 @@
   function poemCard(c) {
     var card = el("div", "card");
     card.innerHTML =
-      (c.ap ? '<span class="card-badge" title="' + T("已含赏析") + '">' +
-        (T.isEn() ? "✦" : "赏") + '</span>' : "") +
       '<span class="dyn">' + esc(dyn(c.d)) + ' · ' + esc(c.f) + '</span>' +
       '<h3>' + esc(c.t) + '</h3>' +
       '<span class="' + (c.a && c.a !== "佚名" ? "author author-link" : "author") + '">' + esc(c.a) + '</span>' +

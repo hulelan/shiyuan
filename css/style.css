@@ -128,30 +128,31 @@ body {
   letter-spacing: var(--track-nav);
   padding: 5px 11px;
   border: none;
+  border-bottom: 1px solid transparent;
   background: transparent;
   color: var(--ink-soft);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 0;
   transition: all .18s;
   position: relative;
 }
-.tabs button:hover { color: var(--cinnabar); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
-.tabs button.active { color: var(--on-accent); background: var(--cinnabar); box-shadow: 0 2px 6px var(--shadow); }
+.tabs button:hover { color: var(--ink); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
+.tabs button.active { color: var(--ink); background: transparent; border-bottom-color: var(--cinnabar); }
 
 .searchbox { width: 100%; max-width: 250px; margin-left: auto; }
 .searchbox input {
   width: 100%;
   padding: 6px 13px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 2px;
   background: var(--sheen);
   font-family: var(--serif);
   font-size: 13px;
   color: var(--ink);
   outline: none;
-  transition: border .18s, box-shadow .18s;
+  transition: border .18s;
 }
-.searchbox input:focus { border-color: var(--cinnabar-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cinnabar) 12%, transparent); }
+.searchbox input:focus { border-color: var(--ink-soft); }
 
 /* ---------- Views ---------- */
 main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
@@ -174,14 +175,14 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   letter-spacing: var(--track-label);
   padding: 4px 11px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 2px;
   background: var(--sheen);
   color: var(--ink-soft);
   cursor: pointer;
   transition: all .16s;
 }
-.chip:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); }
-.chip.active { background: var(--jade); color: var(--on-accent); border-color: var(--jade); }
+.chip:hover { border-color: var(--ink-soft); color: var(--ink); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
+.chip.active { background: transparent; color: var(--ink); border-color: var(--ink-soft); }
 
 /* ---------- Poem cards ---------- */
 .grid {
@@ -190,27 +191,20 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   gap: 11px;
 }
 .card {
-  background: linear-gradient(160deg, var(--paper-hi), var(--paper-lo));
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 13px 14px 12px;
   cursor: pointer;
-  transition: transform .18s, box-shadow .18s, border-color .18s;
+  transition: border-color .18s;
   position: relative;
-  overflow: hidden;
   min-height: 132px;
   display: flex;
   flex-direction: column;
 }
-.card::before {
-  content: "";
-  position: absolute; top: 0; left: 0; width: 3px; height: 100%;
-  background: var(--cinnabar);
-  opacity: .7;
-}
-.card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--shadow); border-color: var(--cinnabar-soft); }
+.card:hover { border-color: var(--ink-soft); }
 .card .dyn {
-  font-size: 10.5px; letter-spacing: var(--track-label); color: var(--gold);
+  font-size: 10.5px; letter-spacing: var(--track-label); color: var(--ink-soft);
 }
 .card h3 {
   margin: 4px 0 1px; font-size: 16px; letter-spacing: 1.5px; color: var(--ink);
@@ -224,25 +218,18 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 }
 .card .tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
 .tag {
-  font-size: 10px; letter-spacing: var(--track-label); padding: 1px 7px;
-  background: color-mix(in srgb, var(--jade) 10%, transparent); color: var(--jade); border-radius: 9px;
+  font-size: 10px; letter-spacing: var(--track-label); padding: 0;
+  background: none; color: var(--ink-soft); border-radius: 0;
 }
 .count { text-align: center; color: var(--ink-soft); font-size: 11.5px; margin-top: 22px; letter-spacing: var(--track-label); }
-.card-badge {
-  position: absolute; top: 8px; right: 8px; z-index: 2;
-  width: 17px; height: 17px; border-radius: 50%;
-  background: var(--jade); color: var(--paper-hi); font-size: 10.5px;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 1px 3px var(--shadow);
-}
 .more-btn {
   display: block; margin: 20px auto 0; padding: 7px 22px;
   font-family: var(--serif); font-size: 12.5px; letter-spacing: var(--track-nav);
-  color: var(--cinnabar); background: var(--sheen);
-  border: 1px solid var(--line); border-radius: 20px; cursor: pointer;
+  color: var(--ink-soft); background: var(--sheen);
+  border: 1px solid var(--line); border-radius: 2px; cursor: pointer;
   transition: all .16s;
 }
-.more-btn:hover { background: var(--cinnabar); color: var(--on-accent); border-color: var(--cinnabar); }
+.more-btn:hover { background: color-mix(in srgb, var(--cinnabar) 6%, transparent); color: var(--ink); border-color: var(--ink-soft); }
 .ai-note {
   margin: 14px 0 2px; padding: 7px 12px; border-radius: 6px;
   background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px dashed var(--gold);
@@ -500,8 +487,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   display: flex; align-items: center; justify-content: center; opacity: .88;
 }
 .au-name { font-size: 14px; letter-spacing: 1px; color: var(--ink); }
-.au-dyn { font-size: 10.5px; letter-spacing: var(--track-label); color: var(--gold); }
-.au-n { margin-left: auto; font-size: 11px; color: var(--jade); }
+.au-dyn { font-size: 10.5px; letter-spacing: var(--track-label); color: var(--ink-soft); }
+.au-n { margin-left: auto; font-size: 11px; color: var(--ink-soft); }
 
 /* ============ 体裁视图 ============ */
 .type-nav { margin-bottom: 18px; }
@@ -510,8 +497,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   font-size: 12.5px; letter-spacing: var(--track-nav); color: var(--cinnabar); font-weight: 700;
   min-width: 80px; text-align: right; padding-right: 8px;
 }
-.type-group .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
-.type-group .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
+.type-group .chip i { font-style: normal; font-size: 10px; color: var(--ink-soft); margin-left: 4px; }
+.type-group .chip.active i { color: var(--ink-soft); }
 
 /* ============ 字词视图 ============ */
 .word-search { max-width: 380px; margin: 0 auto 18px; }
@@ -627,10 +614,10 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   font-size: 12.5px; letter-spacing: var(--track-nav); color: var(--cinnabar); font-weight: 700;
   min-width: 80px; text-align: right; padding-right: 8px;
 }
-.facet-group .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
-.facet-group .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
-.filters .chip i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
-.filters .chip.active i { color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
+.facet-group .chip i { font-style: normal; font-size: 10px; color: var(--ink-soft); margin-left: 4px; }
+.facet-group .chip.active i { color: var(--ink-soft); }
+.filters .chip i { font-style: normal; font-size: 10px; color: var(--ink-soft); margin-left: 4px; }
+.filters .chip.active i { color: var(--ink-soft); }
 
 /* ============ 时间轴 ============ */
 /* 按作者估年的朝代：柱子照画，但用虚线的底框说明它不是逐篇断出来的。 */
@@ -739,7 +726,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 /* 存在感要小：需要的人找得到，不需要的人看不见。 */
 .lang-toggle {
   font-family: var(--serif-en); font-size: 11px; letter-spacing: var(--track-label);
-  background: none; border: 1px solid var(--line); border-radius: 12px;
+  background: none; border: 1px solid var(--line); border-radius: 2px;
   color: var(--gold); padding: 2px 9px; cursor: pointer; margin-left: 10px;
   transition: color .16s, border-color .16s;
 }
@@ -800,14 +787,14 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
 .lens { position: relative; }
 .lens-btn {
   font-family: var(--serif); font-size: 13px; letter-spacing: var(--track-nav);
-  padding: 5px 11px; border: none; background: transparent;
-  color: var(--ink-soft); cursor: pointer; border-radius: 4px;
+  padding: 5px 11px; border: none; border-bottom: 1px solid transparent; background: transparent;
+  color: var(--ink-soft); cursor: pointer; border-radius: 0;
   display: flex; align-items: center; gap: 5px; transition: all .18s;
 }
-.lens-btn:hover { color: var(--cinnabar); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
-.lens.open > .lens-btn { color: var(--cinnabar); background: color-mix(in srgb, var(--cinnabar) 8%, transparent); }
+.lens-btn:hover { color: var(--ink); background: color-mix(in srgb, var(--cinnabar) 6%, transparent); }
+.lens.open > .lens-btn { color: var(--ink); background: color-mix(in srgb, var(--cinnabar) 8%, transparent); }
 /* 正身处某个视角时，按钮显示那一栏的名字，并按选中样式描出来 */
-.lens.active > .lens-btn { color: var(--on-accent); background: var(--cinnabar); box-shadow: 0 2px 6px var(--shadow); }
+.lens.active > .lens-btn { color: var(--ink); background: transparent; box-shadow: none; border-bottom-color: var(--cinnabar); }
 .lens-caret { font-size: 9px; opacity: .7; transition: transform .18s; }
 .lens.open .lens-caret { transform: rotate(180deg); }
 
