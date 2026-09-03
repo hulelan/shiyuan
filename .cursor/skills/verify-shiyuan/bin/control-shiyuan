@@ -1,0 +1,442 @@
+#!/usr/bin/env bash
+# control-shiyuan — launch / doctor / stop a local 诗渊 (classicalchinesepoetry.com) instance.
+#
+# Never kill by process name. Never drive a server this run did not start.
+# Never read or print .env. Evidence lives outside .run/ and is not deleted by stop.
+set -euo pipefail
+
+PREFERRED_PORT=8731
+READY_TIMEOUT_S=12
+
+usage() {
+  cat <<'EOF'
+Usage:
+  control-shiyuan launch [RUN_ID]
+  control-shiyuan doctor [RUN_ID]
+  control-shiyuan stop   [RUN_ID]
+
+RUN_ID defaults to $SHIYUAN_RUN_ID, then to the most recent .run/*/ directory.
+
+launch  starts python3 -m http.server from the repo root on an isolated port
+        (8731 if free, else another high port), waits until the site is ready,
+        and writes .run/$RUN_ID/{port,pid,origin}.
+doctor  read-only. Exit 0 only if THIS RUN's pid is alive, owns the recorded
+        port, origin is http (not file://), and / plus /data/site/manifest.json
+        are the real 诗渊 files. Exit 1 otherwise (file://, unknown pid,
+        port stolen, loadfail-class missing data).
+stop    SIGTERM the recorded pid only, then remove .run/$RUN_ID. Never deletes
+        evidence/.
+EOF
+}
+
+die() { echo "control-shiyuan: $*" >&2; exit 1; }
+
+here() { cd "$(dirname "$0")" && pwd; }
+
+SCRIPT_DIR="$(here)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+RUN_ROOT="$SKILL_DIR/.run"
+
+# This helper only drives 诗渊. Painting lives on another origin; do not follow it.
+[[ -f "$REPO_ROOT/index.html" && -f "$REPO_ROOT/data/site/manifest.json" ]] \
+  || die "repo root does not look like 诗渊 (missing index.html or data/site/manifest.json) at $REPO_ROOT"
+
+resolve_run_id() {
+  local given="${1:-${SHIYUAN_RUN_ID:-}}"
+  if [[ -n "$given" ]]; then
+    echo "$given"
+    return
+  fi
+  local latest
+  latest="$(ls -1dt "$RUN_ROOT"/*/ 2>/dev/null | head -n1 || true)"
+  [[ -n "$latest" ]] || die "no RUN_ID given and no $RUN_ROOT/*/ found; launch first"
+  basename "${latest%/}"
+}
+
+run_dir() {
+  echo "$RUN_ROOT/$1"
+}
+
+read_field() {
+  local dir="$1" name="$2"
+  local f="$dir/$name"
+  [[ -f "$f" ]] || die "missing $f (not a run this helper started?)"
+  tr -d '[:space:]' < "$f"
+}
+
+port_free() {
+  python3 - "$1" <<'PY'
+import socket, sys
+p = int(sys.argv[1])
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    s.bind(("127.0.0.1", p))
+except OSError:
+    sys.exit(1)
+else:
+    sys.exit(0)
+finally:
+    s.close()
+PY
+}
+
+pick_port() {
+  if port_free "$PREFERRED_PORT"; then
+    echo "$PREFERRED_PORT"
+    return
+  fi
+  local p
+  for p in $(seq 8732 8799); do
+    if port_free "$p"; then
+      echo "$p"
+      return
+    fi
+  done
+  python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+}
+
+pid_alive() {
+  local pid="$1"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  [[ -d "/proc/$pid" ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+pid_cmdline() {
+  tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null || true
+}
+
+pid_owns_port() {
+  python3 - "$1" "$2" <<'PY'
+import os, sys
+pid, port = sys.argv[1], int(sys.argv[2])
+inodes = set()
+fd_dir = f"/proc/{pid}/fd"
+try:
+    names = os.listdir(fd_dir)
+except FileNotFoundError:
+    sys.exit(1)
+for name in names:
+    try:
+        target = os.readlink(os.path.join(fd_dir, name))
+    except OSError:
+        continue
+    if target.startswith("socket:[") and target.endswith("]"):
+        inodes.add(target[len("socket:[") : -1])
+hexport = f"{port:04X}"
+for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+    try:
+        with open(path) as f:
+            next(f)
+            for line in f:
+                parts = line.split()
+                local, inode = parts[1], parts[9]
+                _ip, p = local.split(":")
+                if p.upper() == hexport and inode in inodes:
+                    sys.exit(0)
+    except FileNotFoundError:
+        continue
+sys.exit(1)
+PY
+}
+
+http_get() {
+  python3 - "$1" <<'PY'
+import sys, urllib.request
+url = sys.argv[1]
+try:
+    with urllib.request.urlopen(url, timeout=5) as r:
+        body = r.read()
+        print(r.status)
+        sys.stdout.buffer.write(body)
+except Exception as e:
+    print("0", file=sys.stderr)
+    print(e, file=sys.stderr)
+    sys.exit(2)
+PY
+}
+
+ready_http() {
+  local origin="$1"
+  python3 - "$origin" <<'PY'
+import json, sys, urllib.request
+origin = sys.argv[1].rstrip("/")
+try:
+    with urllib.request.urlopen(origin + "/", timeout=3) as r:
+        html = r.read().decode("utf-8", "replace")
+        if r.status != 200 or "诗渊" not in html or 'id="tabstrip"' not in html:
+            sys.exit(1)
+    with urllib.request.urlopen(origin + "/data/site/manifest.json", timeout=3) as r:
+        m = json.loads(r.read().decode("utf-8"))
+        if r.status != 200 or "total" not in m or "build" not in m:
+            sys.exit(1)
+except Exception:
+    sys.exit(1)
+sys.exit(0)
+PY
+}
+
+cmd_launch() {
+  local run_id="${1:-}"
+  if [[ -z "$run_id" ]]; then
+    run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+  fi
+  local dir="$RUN_ROOT/$run_id"
+  mkdir -p "$dir"
+
+  local port
+  port="$(pick_port)"
+  local origin="http://127.0.0.1:${port}"
+
+  # Serve the repo root. Do not cd into tools/ or data/.
+  local log="$dir/server.log"
+  (
+    cd "$REPO_ROOT"
+    exec python3 -m http.server "$port" --bind 127.0.0.1
+  ) >"$log" 2>&1 &
+  local pid=$!
+  echo "$pid" >"$dir/pid"
+  echo "$port" >"$dir/port"
+  echo "$origin" >"$dir/origin"
+  echo "$REPO_ROOT" >"$dir/cwd"
+  date -u +%Y-%m-%dT%H:%M:%SZ >"$dir/started"
+
+  local i
+  for i in $(seq 1 $((READY_TIMEOUT_S * 5))); do
+    if ! pid_alive "$pid"; then
+      die "http.server pid $pid died during launch; see $log"
+    fi
+    if ready_http "$origin"; then
+      cat <<EOF
+RUN_ID=$run_id
+pid=$pid
+port=$port
+origin=$origin
+run_dir=$dir
+ready=yes
+EOF
+      return 0
+    fi
+    sleep 0.2
+  done
+  kill "$pid" 2>/dev/null || true
+  die "server on $origin never became ready; see $log"
+}
+
+print_doctor_fail() {
+  echo "doctor: FAIL — $*"
+  echo "ready=no"
+}
+
+cmd_doctor() {
+  local run_id
+  run_id="$(resolve_run_id "${1:-}")"
+  local dir
+  dir="$(run_dir "$run_id")"
+  local origin port pid
+  origin="$(read_field "$dir" origin)"
+  port="$(read_field "$dir" port)"
+  pid="$(read_field "$dir" pid)"
+
+  echo "doctor: run_id=$run_id"
+  echo "doctor: origin=$origin"
+  echo "doctor: port=$port"
+  echo "doctor: pid=$pid"
+
+  # file:// MUST fail: Store.boot() uses fetch("data/site/manifest.json");
+  # browsers block that on file:// and the UI renders .loadfail「数据没能载入。」
+  case "$origin" in
+    file:*)
+      print_doctor_fail "origin is file:// — Store.boot() cannot fetch; UI shows 数据没能载入. Serve over http."
+      exit 1
+      ;;
+    http://127.0.0.1:*|http://localhost:*)
+      ;;
+    *)
+      print_doctor_fail "origin is not a loopback http server this helper launched ($origin)"
+      exit 1
+      ;;
+  esac
+
+  local expected="http://127.0.0.1:${port}"
+  local expected_local="http://localhost:${port}"
+  if [[ "$origin" != "$expected" && "$origin" != "$expected_local" ]]; then
+    print_doctor_fail "origin $origin does not match recorded port $port"
+    exit 1
+  fi
+
+  if ! pid_alive "$pid"; then
+    print_doctor_fail "unknown/dead pid $pid — not a process this run started"
+    exit 1
+  fi
+
+  local cmd
+  cmd="$(pid_cmdline "$pid")"
+  echo "doctor: cmdline=$cmd"
+  if [[ "$cmd" != *http.server* ]]; then
+    print_doctor_fail "pid $pid cmdline is not python http.server: $cmd"
+    exit 1
+  fi
+  if [[ "$cmd" != *"$port"* ]]; then
+    print_doctor_fail "pid $pid cmdline does not mention port $port"
+    exit 1
+  fi
+
+  local cwd
+  cwd="$(readlink "/proc/$pid/cwd" 2>/dev/null || true)"
+  echo "doctor: cwd=$cwd"
+  if [[ "$cwd" != "$REPO_ROOT" ]]; then
+    print_doctor_fail "pid $pid cwd is $cwd, expected repo root $REPO_ROOT"
+    exit 1
+  fi
+
+  if ! pid_owns_port "$pid" "$port"; then
+    print_doctor_fail "port $port is not owned by pid $pid (stolen or unbound)"
+    exit 1
+  fi
+  echo "doctor: port $port owned by pid $pid"
+
+  # Right files answering — if these fail, the SPA would render .loadfail.
+  local tmp
+  tmp="$(mktemp)"
+  if ! python3 - "$origin" "$tmp" <<'PY'
+import json, sys, urllib.request
+origin, out = sys.argv[1].rstrip("/"), sys.argv[2]
+report = []
+def get(path):
+    with urllib.request.urlopen(origin + path, timeout=5) as r:
+        body = r.read()
+        return r.status, body
+
+status, html = get("/")
+html_s = html.decode("utf-8", "replace")
+needles = [
+    "诗渊",
+    'id="tabstrip"',
+    'class="tabrow tabrow-works"',
+    'id="bootStat"',
+    'id="viewTabs"',
+    'data-view="home"',
+    'id="lensBtn"',
+    'aria-controls="lensMenu"',
+    'id="search"',
+    'id="langToggle"',
+    'id="view-home"',
+    'id="overlay"',
+    'id="poemDetail"',
+    "js/store.js",
+    "js/app.js",
+]
+missing = [n for n in needles if n not in html_s]
+if status != 200 or missing:
+    print(f"GET / status={status} missing={missing}")
+    sys.exit(2)
+if 'class="loadfail"' in html_s:
+    # Static index.html must not already be a failure page.
+    print("GET / already contains .loadfail")
+    sys.exit(2)
+if "classicalchinesepainting.com" not in html_s:
+    print("GET / missing painting tab href (unexpected shell)")
+    sys.exit(2)
+report.append(f"GET / -> {status} index.html ({len(html)} bytes)")
+
+status, raw = get("/data/site/manifest.json")
+try:
+    m = json.loads(raw.decode("utf-8"))
+except Exception as e:
+    print(f"manifest.json is not JSON: {e}")
+    sys.exit(2)
+if status != 200 or "total" not in m or "build" not in m:
+    print(f"manifest.json status={status} keys={list(m)[:12] if isinstance(m, dict) else type(m)}")
+    sys.exit(2)
+if not isinstance(m["total"], int) or m["total"] < 1:
+    print(f"manifest.total is not a positive int: {m.get('total')!r}")
+    sys.exit(2)
+report.append(f"GET /data/site/manifest.json -> {status} total={m['total']} build={m['build']}")
+
+status, raw = get("/data/site/curated.json")
+try:
+    curated = json.loads(raw.decode("utf-8"))
+except Exception as e:
+    print(f"curated.json is not JSON: {e}")
+    sys.exit(2)
+if status != 200 or not isinstance(curated, list) or not curated:
+    print("curated.json missing or empty")
+    sys.exit(2)
+ids = [p.get("id") for p in curated if isinstance(p, dict)]
+if "aec36ff73546" not in ids:
+    print("curated.json does not contain canonical id aec36ff73546")
+    sys.exit(2)
+report.append(f"GET /data/site/curated.json -> {status} n={len(curated)} has aec36ff73546")
+
+open(out, "w", encoding="utf-8").write("\n".join(report) + "\n")
+print("\n".join(report))
+print(f"doctor: manifest.total={m['total']}")
+print(f"doctor: manifest.build={m['build']}")
+PY
+  then
+    print_doctor_fail "right files not answering (this instance would show .loadfail / 数据没能载入)"
+    rm -f "$tmp"
+    exit 1
+  fi
+  rm -f "$tmp"
+
+  echo "doctor: OK"
+  echo "ready=yes"
+  echo "run_id=$run_id"
+  echo "origin=$origin"
+  echo "pid=$pid"
+  echo "port=$port"
+}
+
+cmd_stop() {
+  local run_id
+  run_id="$(resolve_run_id "${1:-}")"
+  local dir
+  dir="$(run_dir "$run_id")"
+  [[ -d "$dir" ]] || die "no run dir $dir"
+  local pid=""
+  if [[ -f "$dir/pid" ]]; then
+    pid="$(tr -d '[:space:]' < "$dir/pid")"
+  fi
+  if [[ -n "$pid" ]] && pid_alive "$pid"; then
+    echo "stop: sending SIGTERM to pid $pid only"
+    kill "$pid" 2>/dev/null || true
+    local i
+    for i in $(seq 1 25); do
+      pid_alive "$pid" || break
+      sleep 0.1
+    done
+    if pid_alive "$pid"; then
+      echo "stop: pid $pid still alive, sending SIGKILL"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  else
+    echo "stop: pid ${pid:-?} already gone"
+  fi
+  # Remove this run's instance metadata only. NEVER evidence/.
+  rm -rf "$dir"
+  echo "stop: removed $dir"
+  echo "stop: evidence (if any) left at $SKILL_DIR/evidence/$run_id/"
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    launch) cmd_launch "${1:-}" ;;
+    doctor) cmd_doctor "${1:-}" ;;
+    stop)   cmd_stop "${1:-}" ;;
+    -h|--help|help|"") usage; [[ -n "$cmd" ]] || exit 2 ;;
+    *) die "unknown command: $cmd (try launch|doctor|stop)" ;;
+  esac
+}
+
+main "$@"
