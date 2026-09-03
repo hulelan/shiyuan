@@ -237,7 +237,11 @@
   function poemLines(p) { return (p.text || "").split("\n"); }
   function isProse(p) {
     var lines = poemLines(p);
-    return p.genre === "文" || lines.some(function (l) { return l.length > 22; });
+    // 赋与文一样是散体：整段成篇，不是一行一句。
+    // 站上原先没有赋，这个分支从没走过；不算进来的话，
+    // 六百多字的《前赤壁赋》会按诗行那样居中、还带 3px 字距。
+    return p.genre === "文" || p.genre === "赋" ||
+      lines.some(function (l) { return l.length > 22; });
   }
 
   function viewHome() {
@@ -978,6 +982,10 @@
       var lines = (p.text || "").split("\n");
       var pys = p.pinyin ? p.pinyin.split("\n") : [];
       var hasPy = pys.length === lines.length;
+      /* 散体默认收起拼音。诗是一行五七个字，注音在上面正好；
+         《前赤壁赋》一段一百三十字，整段注音铺在上面，篇幅翻倍，
+         想读文章的人反而先被挡住。要看的人点一下就有。 */
+      var prosePoem = p.genre === "文" || p.genre === "赋";
       var todo = '<span style="color:var(--gold)">' + T("— 待补充 —") + '</span>';
 
       var sec = section(T("译　文"), p.translation ? esc(p.translation) : todo);
@@ -1005,13 +1013,15 @@
           (p.place && p.place.name ? '<div class="pd-place">✎ ' + esc(p.place.name) +
             (p.place.modern ? '（' + esc(p.place.modern) + '）' : "") + '</div>' : "") +
         '</div>' +
-        '<div class="pd-poem' + (hasPy ? "" : " no-pinyin") + (p.genre === "文" ? " prose" : "") + '" id="pdPoem">' +
+        '<div class="pd-poem' + (hasPy && !prosePoem ? "" : " no-pinyin") +
+          (prosePoem ? " prose" : "") + '" id="pdPoem">' +
           lines.map(function (ln, i) {
             return '<div class="pd-line"><span class="py">' + (hasPy ? esc(pys[i]) : "") +
               '</span><span class="zh">' + esc(ln) + '</span></div>';
           }).join("") +
         '</div>' +
-        (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' + T("隐藏拼音") + '</button>' : "") +
+        (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' +
+          T(prosePoem ? "显示拼音" : "隐藏拼音") + '</button>' : "") +
         (p.enrichedBy ? '<div class="ai-note">' +
           T("✦ 译文 / 注释 / 赏析 / 英译 由 AI（{by}）生成，待校订", { by: esc(p.enrichedBy) }) +
           '</div>' : "") +
