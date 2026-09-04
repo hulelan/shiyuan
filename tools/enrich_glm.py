@@ -26,6 +26,7 @@ OPENROUTER_API_KEY=xxx 一行。密钥不会出现在代码或输出里。
 """
 import json, os, sys, time, argparse, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -157,10 +158,14 @@ def apply_enrichment(rec, e):
     rec["enrichedBy"] = label
 
 
-def save_shards(enrich, source, slugs):
-    """只重写这次改动过的朝代分片 —— 50k 规模下全量重写太慢。"""
+def save_shards(enrich, by_slug, slugs):
+    """只重写这次改动过的朝代分片 —— 50k 规模下全量重写太慢。
+
+    by_slug 在 main 里一次性建好（id → 朝代分片），
+    这里不再为每个分片把整个 enrich 扫一遍（O(n·分片数)）。
+    """
     for slug in sorted(slugs):
-        rows = [enrich[i] for i in enrich if CL.SLUG.get(source[i]["dynasty"]) == slug]
+        rows = [enrich[i] for i in by_slug.get(slug, [])]
         rows.sort(key=lambda r: r["id"])
         clean = [{k: r[k] for k in CL.ENRICH_FIELDS if k in r} for r in rows]
         CL.write_jsonl(os.path.join(CL.ENRICH_DIR, slug + ".jsonl"), clean)
@@ -182,6 +187,11 @@ def main():
     enrich = CL.load_enrich()
     if not source:
         sys.exit("原文层为空。先跑 tools/migrate_corpus.py --write 或 tools/build_corpus.py。")
+
+    # id → 朝代分片，建一次；save_shards 只取自己那几片，不再扫全量
+    by_slug = defaultdict(list)
+    for i in enrich:
+        by_slug[CL.SLUG.get(source[i]["dynasty"])].append(i)
 
     # 待办 = 有原文、非精编（精编是手写的，不让模型覆盖）、编辑层还空着的
     todo_ids = [i for i, s_ in source.items()
@@ -264,10 +274,10 @@ def main():
                     fail += 1
                     print("  ✗ 《%s》%s — 解析失败: %s" % (s_["title"], s_["author"], str(ex)[:120]))
             if since_save >= 200:
-                save_shards(enrich, source, dirty); dirty.clear(); since_save = 0
+                save_shards(enrich, by_slug, dirty); dirty.clear(); since_save = 0
 
     if dirty or since_save:
-        save_shards(enrich, source, dirty or {CL.SLUG[source[i]["dynasty"]] for i in todo_ids})
+        save_shards(enrich, by_slug, dirty or {CL.SLUG[source[i]["dynasty"]] for i in todo_ids})
     print("\n完成：成功 %d，失败 %d，用时 %.0f 秒。" % (done, fail, time.time() - t0))
     print("已写回 data/enrich/。原文层未改动。")
     print("接着跑 tools/build_site_data.py 生成网页用的数据文件。")

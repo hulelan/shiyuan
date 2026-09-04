@@ -20,6 +20,7 @@ build_site_data.py — 把两层语料编译成网页按需抓取的静态文件
     agg/author/<桶>.json          某作者的全部作品（卡片）
     agg/themes.json  forms.json   主题 / 体裁计数
     agg/theme/<键>-<n>.json       某主题的作品（卡片）
+    agg/theme/_tail-<桶>.json     长尾主题合集（按桶分片，见 TAIL_BUCKETS）
     agg/form/<键>-<n>.json        某体裁的作品（卡片）
     agg/places.json               有坐标的作品
     agg/timeline.json             朝代带 + 年代直方图
@@ -48,9 +49,11 @@ SITE = os.path.join(CL.DATA, "site")
 INDEX_SHARD = 2000      # 每个索引分片的卡片数
 BODY_CHUNK = 200        # 每个全文分片的记录数
 AGG_SHARD = 2000        # 主题/体裁/作者聚合分片
-TAIL_MIN = 30           # 少于这么多篇的主题不单独成片，一起塞进 _tail.json
+TAIL_MIN = 30           # 少于这么多篇的主题不单独成片，一起塞进长尾桶
                         # （模型给的主题词没有受控词表，长尾极长：2966 篇就有 960 个主题，
                         #   其中 748 个不足 5 篇。不合并的话产物会是几千个碎文件。）
+TAIL_BUCKETS = 16       # 长尾主题按桶分片：挑任何一个长尾主题只下载它所在的那一桶，
+                        # 而不是把整份 _tail.json（几百 KB）一次拉下来
 AUTHOR_BUCKETS = 64
 SEARCH_BUCKETS = 64
 CHAR_BUCKETS = 64
@@ -262,17 +265,20 @@ def main():
     for pid, r in full.items():
         for t in (r.get("themes") or []):
             th[t].append(pid)
-    theme_meta, tail = [], {}
+    theme_meta, tail = [], defaultdict(dict)
     for i, (name, ids) in enumerate(sorted(th.items(), key=lambda kv: -len(kv[1]))):
         key = "t%03d" % i
         if len(ids) >= TAIL_MIN:
             theme_meta.append({"n": name, "c": len(ids), "k": key,
                                "s": shard_cards("agg/theme", key, ids)})
         else:
-            tail[key] = [cards[x] for x in sorted(
+            # 长尾按桶分片（桶号与 js/store.js 的 bucket() 对齐）：
+            # 前端挑任何一个长尾主题，只抓它所在的那一桶。
+            tail[bucket(key, TAIL_BUCKETS)][key] = [cards[x] for x in sorted(
                 ids, key=lambda x: (cards[x]["d"], cards[x].get("y") or 0))]
             theme_meta.append({"n": name, "c": len(ids), "k": key, "tail": 1})
-    w("agg/theme/_tail.json", tail)
+    for k, payload in tail.items():
+        w("agg/theme/_tail-%02d.json" % k, payload)
     w("agg/themes.json", theme_meta)
 
     fm = defaultdict(list)
@@ -389,13 +395,22 @@ def main():
     for ch in top:
         buckets_by_dyn = hits[ch]
         total = sum(len(v) for v in buckets_by_dyn.values())
-        # 跨朝代轮转取样：宁可让"月"横跨千年，也不要只给最早的 300 首
-        picked, keys, i = [], sorted(buckets_by_dyn), 0
-        while len(picked) < CHAR_MAX_HITS and any(buckets_by_dyn[k] for k in keys):
-            k = keys[i % len(keys)]
-            if buckets_by_dyn[k]:
-                picked.append(buckets_by_dyn[k].pop(0))
-            i += 1
+        # 跨朝代轮转取样：宁可让"月"横跨千年，也不要只给最早的 300 首。
+        # 用每朝代的游标代替 pop(0)——pop(0) 每取一条都要把整表前移，是 O(n²)。
+        picked, keys, i, n = [], sorted(buckets_by_dyn), 0, len(buckets_by_dyn)
+        ptr = {k: 0 for k in keys}
+        while len(picked) < CHAR_MAX_HITS:
+            found = False
+            for _ in range(n):
+                k = keys[i % n]
+                i += 1
+                if ptr[k] < len(buckets_by_dyn[k]):
+                    picked.append(buckets_by_dyn[k][ptr[k]])
+                    ptr[k] += 1
+                    found = True
+                    break
+            if not found:
+                break
         if total > len(picked):
             truncated += 1
         cb[bucket(ch, CHAR_BUCKETS)][ch] = {
@@ -410,9 +425,22 @@ def main():
                              "distinct": len(freq), "maxHits": CHAR_MAX_HITS})
 
     # ---- manifest ----
-    fp = hashlib.md5(json.dumps(
-        {p: (full[p]["text"], full[p].get("translation", "")) for p in sorted(full)},
-        ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:10]
+    # 指纹：逐条喂进 md5，避免为整个语料拼一张大 JSON 再哈希。
+    # 字节流必须与老写法 json.dumps({p: (text, trans)…}, sort_keys=True) 完全一致，
+    # 否则语料没动也会换一个 build 号，把 build_relevance 的产物误标成 stale。
+    h = hashlib.md5()
+    first = True
+    for p in sorted(full):
+        h.update(b"{" if first else b", ")
+        first = False
+        h.update(json.dumps(p, ensure_ascii=False).encode("utf-8"))
+        h.update(b": [")
+        h.update(json.dumps(full[p]["text"], ensure_ascii=False).encode("utf-8"))
+        h.update(b", ")
+        h.update(json.dumps(full[p].get("translation", ""), ensure_ascii=False).encode("utf-8"))
+        h.update(b"]")
+    h.update(b"}")
+    fp = h.hexdigest()[:10]
     # 各编辑层的覆盖率 —— admin.html 靠这个判断哪一层还欠账，
     # 不必再为了几个计数把整个语料塞进浏览器。
     def has(f):
@@ -438,6 +466,7 @@ def main():
         "indexShard": INDEX_SHARD, "bodyChunk": BODY_CHUNK, "aggShard": AGG_SHARD,
         "authorBuckets": AUTHOR_BUCKETS, "searchBuckets": SEARCH_BUCKETS,
         "charBuckets": CHAR_BUCKETS, "lookupBuckets": LOOKUP_BUCKETS,
+        "tailBuckets": TAIL_BUCKETS,
         "authors": len(authors), "themes": len(theme_meta), "forms": len(form_meta),
         "places": len(places),
         "charsIndexed": len(top), "charsDistinct": len(freq),

@@ -90,7 +90,10 @@ window.Store = (function () {
     themes: function () { return get("agg/themes.json"); },
     themeCards: function (meta, k) {
       if (meta.tail) {
-        return get("agg/theme/_tail.json").then(function (m) { return m[meta.k] || []; });
+        // 长尾主题按桶分片（见 build_site_data.py 的 TAIL_BUCKETS）：只抓所在那一桶，
+        // 不再为看三五张卡片把整份 _tail.json 拉下来。
+        return get("agg/theme/_tail-" + p2(bucket(meta.k, M.tailBuckets || 16)) + ".json")
+          .then(function (m) { return m[meta.k] || []; });
       }
       return get("agg/theme/" + meta.k + "-" + p3(k || 0) + ".json");
     },
