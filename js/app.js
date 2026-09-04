@@ -962,6 +962,129 @@
     })["catch"](function () { /* 没有邻居不是错，静默即可 */ });
   }
 
+  /* ---------- 行内笺注 ----------
+     编辑层里的 notes 是 [{term, explain}]，term 多半是原文里一字不差的一段。
+     从前它们只堆在「注　释」那一栏里 —— 读到"冯虚御风"想知道是什么意思，
+     得先记住这四个字，再滚到下面去翻。莎剧的笺注本不是这么做的：
+     难字就在字底下标一道线，看一眼就走。
+
+     这里把 term 在正文里定位，包成可点的 span。规则三条：
+       · 长的先匹配 —— 有"明月之诗"就不该只标出"明月"
+       · 每条注只标第一次出现的地方 —— 通篇每个"之"都画线，等于没画
+       · 已经标过的字不再重叠标注
+     定不了位的（约 5%：并列词条、篇名之类）照旧留在下面那一栏，不丢。 */
+  function buildGlossIndex(notes) {
+    var list = (notes || []).filter(function (n) {
+      return n && n.term && String(n.term).trim() && n.explain;
+    }).map(function (n, i) {
+      return { i: i, term: String(n.term).trim(), explain: String(n.explain) };
+    });
+    // 长的排前面：匹配时先来先得，长词才不会被短词抢走
+    list.sort(function (a, b) { return b.term.length - a.term.length; });
+    return list;
+  }
+
+  /* 把一行原文切成 [纯文本 | 笺注] 若干段。used 跨行共享，保证"只标第一次"。 */
+  function glossLine(line, index, used) {
+    if (!index.length) return esc(line);
+    var marks = [];
+    index.forEach(function (g) {
+      if (used[g.i]) return;
+      var at = line.indexOf(g.term);
+      if (at < 0) return;
+      // 与已选中的区段重叠就让开
+      for (var k = 0; k < marks.length; k++) {
+        if (at < marks[k].end && at + g.term.length > marks[k].start) return;
+      }
+      marks.push({ start: at, end: at + g.term.length, g: g });
+      used[g.i] = true;
+    });
+    if (!marks.length) return esc(line);
+    marks.sort(function (a, b) { return a.start - b.start; });
+    var out = "", at = 0;
+    marks.forEach(function (m) {
+      out += esc(line.slice(at, m.start));
+      out += '<span class="gl" tabindex="0" role="button" data-g="' + m.g.i +
+             '" aria-label="' + esc(m.g.term + "：" + m.g.explain) + '">' +
+             esc(line.slice(m.start, m.end)) + '</span>';
+      at = m.end;
+    });
+    return out + esc(line.slice(at));
+  }
+
+  /* 一个浮标，随点随移。不给每条注各做一个，是为了省 DOM ——
+     《前赤壁赋》有四十三条注。 */
+  /* 文档级的监听只挂一次。attachGloss 每开一篇就会调一次，
+     每次都 addEventListener 的话，开过二十篇就有二十个监听在跑。 */
+  var glossEsc = null, glossAway = null;
+
+  function attachGloss(host, index) {
+    var tip = el("div", "gl-tip");
+    tip.hidden = true;
+    host.appendChild(tip);
+    var open = null;
+
+    function hide() {
+      tip.hidden = true;
+      if (open) open.classList.remove("on");
+      open = null;
+    }
+    function show(span) {
+      var g = index.filter(function (x) { return x.i === +span.getAttribute("data-g"); })[0];
+      if (!g) return;
+      if (open === span) return hide();
+      if (open) open.classList.remove("on");
+      open = span;
+      span.classList.add("on");
+      tip.innerHTML = '<b>' + esc(g.term) + '</b>' + esc(g.explain);
+      tip.hidden = false;
+
+      // 贴着被点的词放：左右不越出浮层，上下不越出视窗。
+      // 先放词下面；下面塞不下就翻到上面；两边都塞不下就往视窗里挤。
+      var hb = host.getBoundingClientRect(), sb = span.getBoundingClientRect();
+      tip.style.left = "0px";
+      tip.style.top = "0px";
+      var w = tip.offsetWidth, h = tip.offsetHeight, PAD = 10;
+
+      var left = sb.left - hb.left + sb.width / 2 - w / 2;
+      left = Math.max(PAD, Math.min(left, hb.width - w - PAD));
+      tip.style.left = Math.round(left) + "px";
+
+      var topVp = sb.bottom + 7;                       // 视窗坐标
+      if (topVp + h + PAD > window.innerHeight) {
+        topVp = sb.top - h - 7;                        // 翻到上面
+      }
+      topVp = Math.max(PAD, Math.min(topVp, window.innerHeight - h - PAD));
+      tip.style.top = Math.round(topVp - hb.top) + "px";
+    }
+
+    host.querySelectorAll(".gl").forEach(function (sp) {
+      sp.addEventListener("click", function (e) { e.stopPropagation(); show(sp); });
+      sp.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(sp); }
+      });
+    });
+
+    if (glossEsc) document.removeEventListener("keydown", glossEsc, true);
+    if (glossAway) document.removeEventListener("click", glossAway, true);
+
+    /* Esc 用捕获阶段，并且开着注的时候要拦下来。
+       否则同一下 Esc 会先被浮层的关闭键接走 —— 想收起一条注，
+       整首诗跟着关掉了。 */
+    glossEsc = function (e) {
+      if (e.key !== "Escape" || tip.hidden) return;
+      e.stopPropagation();
+      hide();
+    };
+    glossAway = function (e) {
+      if (tip.hidden) return;
+      if (!e.target.closest || (!e.target.closest(".gl") && !e.target.closest(".gl-tip"))) hide();
+    };
+    document.addEventListener("keydown", glossEsc, true);
+    document.addEventListener("click", glossAway, true);
+    return hide;
+  }
+
   // ---------- 详情浮层 ----------
   function section(title, bodyHtml, en) {
     return '<div class="pd-sec"><div class="pd-sec-head"><h4>' + title +
@@ -984,12 +1107,27 @@
          《前赤壁赋》一段一百三十字，整段注音铺在上面，篇幅翻倍，
          想读文章的人反而先被挡住。要看的人点一下就有。 */
       var prosePoem = p.genre === "文" || p.genre === "赋";
+      var glossIdx = buildGlossIndex(p.notes), glossUsed = {};
+      /* 正文得先排 —— glossLine 一边排一边把用掉的注记进 glossUsed，
+         下面那一栏要靠它标出"哪几条已经在正文里点得到了"。
+         顺序反了不会报错，只是全都标不上，最难查的那种。 */
+      var bodyHtml = lines.map(function (ln, i) {
+        return '<div class="pd-line"><span class="py">' + (hasPy ? esc(pys[i]) : "") +
+          '</span><span class="zh">' + glossLine(ln, glossIdx, glossUsed) + '</span></div>';
+      }).join("");
       var todo = '<span style="color:var(--gold)">' + T("— 待补充 —") + '</span>';
 
       var sec = section(T("译　文"), p.translation ? esc(p.translation) : todo);
+      // 这一栏留着当全表：正文里点得到的，和定不了位的，都在这儿。
+      // 已经落进正文的那些标一个点，省得读者以为漏了。
       sec += section(T("注　释"), (p.notes && p.notes.length)
-        ? '<ul class="notes-list">' + p.notes.map(function (n) {
-            return '<li><span class="term">' + esc(n.term) + '</span>' + esc(n.explain) + '</li>';
+        ? '<p class="notes-hint">' + T("正文里带虚线的字词可以直接点开；下面是全部注释。") + '</p>' +
+          '<ul class="notes-list">' + p.notes.map(function (n, i) {
+            var inline = glossUsed[glossIdx.filter(function (g) {
+              return g.term === String(n.term || "").trim();
+            }).map(function (g) { return g.i; })[0]];
+            return '<li' + (inline ? ' class="inlined"' : "") + '><span class="term">' +
+              esc(n.term) + '</span>' + esc(n.explain) + '</li>';
           }).join("") + '</ul>' : todo);
       sec += section(T("赏　析"), p.appreciation ? esc(p.appreciation) : todo);
       sec += section("English", p.english
@@ -1013,10 +1151,7 @@
         '</div>' +
         '<div class="pd-poem' + (hasPy && !prosePoem ? "" : " no-pinyin") +
           (prosePoem ? " prose" : "") + '" id="pdPoem">' +
-          lines.map(function (ln, i) {
-            return '<div class="pd-line"><span class="py">' + (hasPy ? esc(pys[i]) : "") +
-              '</span><span class="zh">' + esc(ln) + '</span></div>';
-          }).join("") +
+          bodyHtml +
         '</div>' +
         (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' +
           T(prosePoem ? "显示拼音" : "隐藏拼音") + '</button>' : "") +
@@ -1043,6 +1178,7 @@
         var hidden = $("#pdPoem").classList.toggle("no-pinyin");
         this.textContent = hidden ? T("显示拼音") : T("隐藏拼音");
       });
+      if (glossIdx.length) attachGloss(d, glossIdx);
       renderNear(p);
     })["catch"](function (e) {
       d.innerHTML = '<button class="close-btn" id="closeDetail">×</button>' +

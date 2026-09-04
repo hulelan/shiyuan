@@ -169,6 +169,8 @@ window.T = (function () {
     "没能取到这首作品。": "Could not load this work.",
     "未找到 {id}": "Not found: {id}",
     "已含赏析": "has commentary",
+    "正文里带虚线的字词可以直接点开；下面是全部注释。":
+      "Dotted words in the text open a gloss; the full list follows.",
     "推荐一幅画": "Suggest a painting",
     "为这一篇推荐一幅画（会开一个 GitHub issue）":
       "Suggest a painting for this work (opens a GitHub issue)"

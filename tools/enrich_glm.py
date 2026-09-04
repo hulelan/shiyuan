@@ -24,7 +24,7 @@ OPENROUTER_API_KEY=xxx 一行。密钥不会出现在代码或输出里。
 每 200 首落盘一次，且只重写当次改动过的朝代分片，可随时中断续跑。
 生成内容标注 enrichedBy=<模型名>，网页会显示"AI 生成·待校订"。
 """
-import json, os, sys, time, argparse, urllib.request, urllib.error
+import json, os, re, sys, time, argparse, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
@@ -66,7 +66,10 @@ PROMPT_TMPL = """请为下面这首作品撰写赏读资料。
 只返回一个 JSON 对象（不要 markdown 代码块、不要多余文字），字段如下：
 {{
   "translation": "通顺的白话译文，忠于原意",
-  "notes": [{{"term":"字词/典故","explain":"简明解释"}}],   // 3-6 条，挑难点
+  "notes": [{{"term":"字词/典故","explain":"简明解释"}}],   // {nnotes}
+                       // term 必须是原文里**一字不差**的连续片段，页面要拿它在正文中定位、
+                       // 做成可点的行内注（像莎剧笺注本那样）。不要写成"甲/乙"、
+                       // "甲、乙"这种并列，也不要写标题或篇名；一条只注一处。
   "appreciation": "120-220字的赏析，谈意境、手法与情感，勿空泛",
   "english": "流畅自然的英文翻译，可用 / 分隔诗行",
   "themes": ["主题词"],                                      // 2-4 个中文主题，如 思乡/送别/田园/爱情/咏物/怀古/边塞/哲理
@@ -76,6 +79,23 @@ PROMPT_TMPL = """请为下面这首作品撰写赏读资料。
 }}
 若某字段确实无法判断，宁可从简，但 translation/appreciation/english 必须给出。"""
 
+def notes_quota(poem):
+    """
+    要几条注，按篇幅走。
+
+    原先一律"3-6 条"。那是照着绝句定的：二十个字挑三五个难点正合适。
+    可《前赤壁赋》六百四十五字，五条注等于没注 —— 而这些注现在是
+    页面上的行内笺（读到哪个词点哪个词），密度不够就形同虚设。
+    莎剧笺注本大约每十到二十字一条，这里按每 25 字一条估，上下封顶。
+    """
+    n = len(re.sub(r"\s", "", poem.get("text") or ""))
+    lo = max(3, min(24, n // 25))
+    hi = max(6, min(40, n // 14))
+    if n <= 40:                      # 绝句一类，注多了反而盖过诗
+        lo, hi = 3, 6
+    return "%d-%d 条，挑真正难懂的：僻字、古义、典故、名物、通假" % (lo, hi)
+
+
 def call_glm(key, poem, timeout=120):
     body = {
         "model": MODEL,
@@ -83,7 +103,8 @@ def call_glm(key, poem, timeout=120):
             {"role": "system", "content": SYSTEM},
             {"role": "user", "content": PROMPT_TMPL.format(
                 title=poem["title"], author=poem["author"],
-                dynasty=poem["dynasty"], text=poem["text"])},
+                dynasty=poem["dynasty"], text=poem["text"],
+                nnotes=notes_quota(poem))},
         ],
         "temperature": 0.6,
         "response_format": {"type": "json_object"},
@@ -174,6 +195,8 @@ def main():
     global MODEL, REASONING
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0, help="本次最多处理多少首（0=全部）")
+    ap.add_argument("--ids", nargs="*", default=None,
+                    help="只处理这几个 id（试注释密度、补单篇时用）")
     ap.add_argument("--sample", type=int, default=0, help="跨朝代/体裁均匀抽 N 首来试（而非取前 N 首）")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--model", default=MODEL)
@@ -198,7 +221,13 @@ def main():
                 if not s_.get("curated") and not CL.is_enriched(enrich.get(i))]
     todo_ids.sort(key=lambda i: (source[i]["dynastyOrder"], source[i]["title"]))
 
-    if args.sample:
+    if args.ids:
+        # 指定 id 时连"已有编辑层"也重做 —— 补注释、试新提示词都要能覆盖
+        todo_ids = [i for i in args.ids if i in source]
+        missing = [i for i in args.ids if i not in source]
+        if missing:
+            print("这几个 id 不在原文层里：", "、".join(missing))
+    elif args.sample:
         # 按 (朝代, 体裁) 分桶，轮转抽取，尽量覆盖诗/词/曲/文各类
         buckets = {}
         for i in todo_ids:
