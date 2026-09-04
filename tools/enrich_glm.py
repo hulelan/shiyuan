@@ -186,7 +186,9 @@ def save_shards(enrich, by_slug, slugs):
     这里不再为每个分片把整个 enrich 扫一遍（O(n·分片数)）。
     """
     for slug in sorted(slugs):
-        rows = [enrich[i] for i in by_slug.get(slug, [])]
+        # by_slug 是按 source 建的，所以会列到还没有编辑层记录的 id；
+        # 那些跳过即可，不能拿它们去 enrich 里取值。
+        rows = [enrich[i] for i in by_slug.get(slug, []) if i in enrich]
         rows.sort(key=lambda r: r["id"])
         clean = [{k: r[k] for k in CL.ENRICH_FIELDS if k in r} for r in rows]
         CL.write_jsonl(os.path.join(CL.ENRICH_DIR, slug + ".jsonl"), clean)
@@ -211,9 +213,15 @@ def main():
     if not source:
         sys.exit("原文层为空。先跑 tools/migrate_corpus.py --write 或 tools/build_corpus.py。")
 
-    # id → 朝代分片，建一次；save_shards 只取自己那几片，不再扫全量
+    # id → 朝代分片。建一次，之后增量维护。
+    #
+    # 这里必须按 source 建，不能按 enrich 建 —— 那是个会静静丢数据的坑：
+    # enrich 里只有"已经有编辑层记录"的 id；新导入、还一条记录都没有的作品
+    # 不在其中。而 save_shards 只写 by_slug 里列到的 id，于是这些作品
+    # 模型跑了、钱付了、内存里也填好了，落盘时却被整批漏掉，还一声不响。
+    # （2026-09 就这么丢过 416 篇：import_canon.py 导进来的那批没有空记录。）
     by_slug = defaultdict(list)
-    for i in enrich:
+    for i in source:
         by_slug[CL.SLUG.get(source[i]["dynasty"])].append(i)
 
     # 待办 = 有原文、非精编（精编是手写的，不让模型覆盖）、编辑层还空着的

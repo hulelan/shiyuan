@@ -376,13 +376,20 @@ def main():
 
     merged = list(src.values()) + recs
     ns = CL.save_layer(CL.SOURCE_DIR, merged, CL.SOURCE_FIELDS)
+    # 给新篇目在编辑层补一条空记录，并落盘。
+    # 从前这里只在内存里 setdefault，忘了写回去 —— 看上去没事，
+    # 直到 enrich_glm 依赖"编辑层里有没有这个 id"来决定写哪些分片，
+    # 于是这批作品跑完模型却存不下来。空记录本身没内容，但它是这一篇
+    # 在编辑层里的位置，得先占上。
     enr = CL.load_enrich()
+    dyn_of = {x["id"]: x["dynasty"] for x in merged}
     for r in recs:
-        enr.setdefault(r["id"], {"id": r["id"]})["_slug"] = CL.SLUG[r["dynasty"]]
+        enr.setdefault(r["id"], {"id": r["id"]})
     for pid, e in enr.items():
-        if pid in {x["id"] for x in merged}:
-            e.setdefault("_slug", CL.SLUG[
-                next(x["dynasty"] for x in merged if x["id"] == pid)])
+        if pid in dyn_of:
+            e["_slug"] = CL.SLUG[dyn_of[pid]]
+    CL.save_layer(CL.ENRICH_DIR, [e for p, e in enr.items() if p in dyn_of],
+                  CL.ENRICH_FIELDS)
     print("\n原文层写入：", ns)
     print("总计 %d 篇（原 %d，新增 %d）" % (len(merged), len(src), len(recs)))
     print("\n接着跑：")
