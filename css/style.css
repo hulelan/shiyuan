@@ -299,23 +299,34 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 }
 .pd-poem { text-align: center; padding: 22px 0 6px; }
 .pd-line { margin: 4px 0; }
-/* 拼音是拉丁字母，必须用西文那副排 —— 它长在 .pd-poem 里，
-   而 .pd-poem 是宋体；不特意夺回来的话，每一首诗的注音都由宋体自带的
-   那副拉丁字母来排，正是我们要治的那个毛病。
+/* 注音用 ruby：一个音焊在一个字上，怎么折行都跟着走。
+   从前是「一整行拼音」堆在「一整行汉字」上面，两块各自折行 ——
+   绝句五七个字对得上，散文一段一百多字就彻底错开了。
+
+   拼音是拉丁字母，得用西文那副排：ruby 长在 .pd-poem 里，而那是宋体；
+   不特意夺回来的话，注音会由宋体自带的那副拉丁字母来排。
    声调符号（ǎ ē ǚ）在 latin-ext 一档，css/fonts.css 已经带上了。 */
-.pd-line .py {
-  display: block; font-family: var(--serif-en);
-  font-size: 10.5px; color: var(--gold);
-  letter-spacing: var(--track-label); margin-bottom: 1px; height: 14px;
-}
 .pd-line .zh { font-size: 19px; letter-spacing: 3px; color: var(--ink); line-height: 1.65; }
-.pd-poem.no-pinyin .py { display: none; }
+.pd-poem ruby { ruby-position: over; -webkit-ruby-position: before; }
+.pd-poem rt {
+  font-family: var(--serif-en);
+  font-size: 9.5px; font-weight: 400; line-height: 1.35;
+  color: var(--gold); letter-spacing: 0;
+  text-align: center; user-select: none;
+  /* 左右各留一点：注文比汉字宽时，相邻两个音会挤在一起读成一个词
+     （zhōuyóu、qīngfēng）。这点内边距算进注文宽度里，
+     浏览器排版时自然把两个字推开，音与音之间就有缝了。 */
+  padding: 0 .22em;
+}
+/* 显示注音时行距要放开，否则上一行的字会压到下一行的注上 */
+.pd-poem:not(.no-pinyin) .pd-line .zh { line-height: 2.45; }
+.pd-poem.no-pinyin rt { display: none; }
 
 /* 文言文散文/语录：左对齐、正常字距、可折行 */
 .pd-poem.prose { text-align: left; padding: 20px 4px 6px; }
 .pd-poem.prose .pd-line { margin: 0 0 14px; }
 .pd-poem.prose .zh { font-size: 15.5px; letter-spacing: .8px; line-height: 2.1; }
-.pd-poem.prose .py { height: auto; line-height: 1.7; text-align: left; margin-bottom: 3px; }
+.pd-poem.prose:not(.no-pinyin) .zh { line-height: 2.9; }
 
 .pinyin-toggle {
   display: block; margin: 4px auto 0; font-family: var(--serif);

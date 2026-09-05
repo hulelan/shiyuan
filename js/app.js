@@ -984,32 +984,53 @@
     return list;
   }
 
-  /* 把一行原文切成 [纯文本 | 笺注] 若干段。used 跨行共享，保证"只标第一次"。 */
-  function glossLine(line, index, used) {
-    if (!index.length) return esc(line);
+  /* 一行原文 → 带注音、带笺注的 HTML。
+
+     注音用 <ruby>，不再把一整行拼音堆在汉字上面那一块。
+     从前是「一块拼音 + 一块汉字」，两块各自折行：绝句只有五七个字，
+     两行刚好对得上；可《前赤壁赋》一段一百二十四字，两块一折，
+     拼音与汉字就彻底错开 —— 上面十行罗马字，下面十行汉字，
+     谁也不知道哪个音配哪个字。
+     ruby 是浏览器专为这件事做的：注音焊在字上，怎么折行都跟着走。
+
+     生成拼音时用的是 errors=lambda x: list(x)，所以标点也各占一个位置，
+     拼音与汉字严格一一对应（已在全库核对）。标点头上不注音 —— 
+     在「。」上面再印一个「。」没有意义。 */
+  function annotate(line, pys, index, used) {
     var marks = [];
     index.forEach(function (g) {
       if (used[g.i]) return;
       var at = line.indexOf(g.term);
       if (at < 0) return;
-      // 与已选中的区段重叠就让开
       for (var k = 0; k < marks.length; k++) {
         if (at < marks[k].end && at + g.term.length > marks[k].start) return;
       }
       marks.push({ start: at, end: at + g.term.length, g: g });
       used[g.i] = true;
     });
-    if (!marks.length) return esc(line);
     marks.sort(function (a, b) { return a.start - b.start; });
+
+    function chars(from, to) {
+      var out = "";
+      for (var i = from; i < to; i++) {
+        var ch = line[i], py = pys ? pys[i] : null;
+        // 标点、空白、以及拼音与字面相同的（转不出音的字），都不注
+        if (!py || py === ch || !/[一-鿿]/.test(ch)) { out += esc(ch); continue; }
+        out += "<ruby>" + esc(ch) + "<rt>" + esc(py) + "</rt></ruby>";
+      }
+      return out;
+    }
+
+    if (!marks.length) return chars(0, line.length);
     var out = "", at = 0;
     marks.forEach(function (m) {
-      out += esc(line.slice(at, m.start));
+      out += chars(at, m.start);
       out += '<span class="gl" tabindex="0" role="button" data-g="' + m.g.i +
              '" aria-label="' + esc(m.g.term + "：" + m.g.explain) + '">' +
-             esc(line.slice(m.start, m.end)) + '</span>';
+             chars(m.start, m.end) + '</span>';
       at = m.end;
     });
-    return out + esc(line.slice(at));
+    return out + chars(at, line.length);
   }
 
   /* 一个浮标，随点随移。不给每条注各做一个，是为了省 DOM ——
@@ -1108,12 +1129,15 @@
          想读文章的人反而先被挡住。要看的人点一下就有。 */
       var prosePoem = p.genre === "文" || p.genre === "赋";
       var glossIdx = buildGlossIndex(p.notes), glossUsed = {};
-      /* 正文得先排 —— glossLine 一边排一边把用掉的注记进 glossUsed，
+      /* 正文得先排 —— annotate 一边排一边把用掉的注记进 glossUsed，
          下面那一栏要靠它标出"哪几条已经在正文里点得到了"。
          顺序反了不会报错，只是全都标不上，最难查的那种。 */
       var bodyHtml = lines.map(function (ln, i) {
-        return '<div class="pd-line"><span class="py">' + (hasPy ? esc(pys[i]) : "") +
-          '</span><span class="zh">' + glossLine(ln, glossIdx, glossUsed) + '</span></div>';
+        var py = hasPy ? (pys[i] || "").split(" ") : null;
+        // 拼音的个数得跟字数对上，对不上就整行不注 —— 错位的注音比没有还坏
+        if (py && py.length !== ln.length) py = null;
+        return '<div class="pd-line"><span class="zh">' +
+          annotate(ln, py, glossIdx, glossUsed) + '</span></div>';
       }).join("");
       var todo = '<span style="color:var(--gold)">' + T("— 待补充 —") + '</span>';
 
