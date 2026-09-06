@@ -16,7 +16,7 @@
   <div class="tabstrip" id="tabstrip">
     <div class="tabrow tabrow-works">
       <a class="tabstrip-tab active" href="index.html">诗渊</a>
-      <a class="tabstrip-tab" href="https://classicalchinesepainting.com/">千里江山图</a>
+      <a class="tabstrip-tab" href="https://classicalchinesepainting.com/">画　匣</a>
     </div>
   </div>
 
@@ -73,13 +73,9 @@
     var m = /[?&]font=([a-e])/.exec(location.search);
     if (m) { try { localStorage.setItem("sy_font", m[1]); } catch (e) {} }
     var f = m ? m[1] : (function(){ try { return localStorage.getItem("sy_font"); } catch(e){ return null; } })();
-    if (f && f !== "a") {
-      document.body.classList.add("font-" + f);
-      var NAME = { b: "界面无衬线", c: "Helvetica + 黑体", d: "Avenir + 苹方", e: "Georgia + 宋体" };
-      var tag = document.createElement("div");
-      tag.id = "fontTag"; tag.textContent = "font " + f.toUpperCase() + " · " + NAME[f];
-      document.body.appendChild(tag);
-    }
+    /* No corner tag: it was scaffolding for picking a face, and the picking is
+       done. ?font= still switches, and the class on <body> says which. */
+    if (f && f !== "a") document.body.classList.add("font-" + f);
   })();
   </script>
   <script src="js/i18n.js"></script>
