@@ -73,9 +73,18 @@
     var m = /[?&]font=([a-e])/.exec(location.search);
     if (m) { try { localStorage.setItem("sy_font", m[1]); } catch (e) {} }
     var f = m ? m[1] : (function(){ try { return localStorage.getItem("sy_font"); } catch(e){ return null; } })();
-    /* No corner tag: it was scaffolding for picking a face, and the picking is
-       done. ?font= still switches, and the class on <body> says which. */
-    if (f && f !== "a") document.body.classList.add("font-" + f);
+    if (f && f !== "a") {
+      document.body.classList.add("font-" + f);
+      /* The tag is back while the trying is on: with six alternates you cannot
+         tell d from g by eye after a page change, and a guess is not a choice.
+         ?font=a clears it. */
+      var NAME = { b: "系统无衬线", c: "Helvetica + 黑体", d: "Avenir + 苹方",
+                   e: "Georgia + 宋体", f: "Verdana", g: "Optima" };
+      var tag = document.createElement("div");
+      tag.id = "fontTag";
+      tag.textContent = f.toUpperCase() + " · " + (NAME[f] || "");
+      document.body.appendChild(tag);
+    }
   })();
   </script>
   <script src="js/i18n.js"></script>

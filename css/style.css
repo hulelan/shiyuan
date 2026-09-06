@@ -53,7 +53,40 @@
   --serif-en:  var(--latin), serif;        /* 纯西文段落（英译） */
   --serif-poem: var(--han), Georgia, serif; /* 诗行：正文，汉字打头 */
 
-  /* ---- 字距 --------------------------------------------------------------
+  #fontTag { position: fixed; left: 10px; bottom: 9px; z-index: 90;
+  font: 10px/1 ui-monospace, Menlo, monospace; letter-spacing: 1px;
+  color: var(--ink-soft); opacity: .45; pointer-events: none; }
+#fontTag:hover { opacity: .8 }
+
+/* ---- 试装：?font=b…g -----------------------------------------------------
+   只换西文那一副（个别项连汉字一起换），因为拉丁排在前面，换它就是换整个
+   界面的声气。--ui 由 --latin 与 --han 拼出，所以改这两个变量即可，不必
+   把每条 font-family 再写一遍。?font=a 回到 Spectral。 */
+body.font-b {                       /* 系统无衬线：苹方 / SF / Segoe */
+  --latin: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --han: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+body.font-c {                       /* Helvetica + 黑体：像展签 */
+  --latin: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --han: "Heiti SC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+body.font-d {                       /* Avenir：西文圆润，汉字仍用苹方 */
+  --latin: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  --han: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+}
+body.font-e {                       /* Georgia + 宋体：仍是衬线，另一种口音 */
+  --latin: Georgia, "Times New Roman", serif;
+}
+body.font-f {                       /* Verdana：为屏幕画的，小字最经得起 */
+  --latin: Verdana, Tahoma, "DejaVu Sans", sans-serif;
+  --han: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  letter-spacing: 0;                /* 它本来就宽，再加字距就散 */
+}
+body.font-g {                       /* Optima：人文无衬线，笔画有粗细，配宋体不违和 */
+  --latin: Optima, Candara, "Gill Sans", "Segoe UI", sans-serif;
+}
+
+/* ---- 字距 --------------------------------------------------------------
      汉字是方块，2–3px 的间隙让它透气，是排汉字的常识。
      同样的间隙落到拉丁字母上，词就散成一个个字母 —— "Other ways in"
      读起来像招牌不像句子。所以字距必须跟着语言走，而不是写死在每条规则里。
@@ -74,8 +107,17 @@
   --track-label: .04em;   /* 小字标签留一点点，那点字距是它成立的条件 */
   --track-title: .06em;
 }
-/* 西文的行高该比汉字松一点：汉字方正，西文有升降部 */
-:root[lang="en"] body { line-height: 1.55; }
+/* 行高不再随语言变。西文该比汉字松一点是对的，但挂在 body 上，一切换语言
+   整页的行盒就重算：页眉那行「诗渊」高度 31px→28px，基线挪一像素，看上去
+   就是字在跳。行高给死，两种语言同一个数；西文该松的那点，只加在成段的
+   译文与说明上 —— 那里本来就是纯西文，跳也跳不到别处去。 */
+body { line-height: 1.5; }
+.brand h1 { line-height: 1.25; }
+:root[lang="en"] .pd-sec-body,
+:root[lang="en"] .view-intro,
+:root[lang="en"] .caveat,
+:root[lang="en"] .word-row,
+:root[lang="en"] .wr-line { line-height: 1.65; }
 
 * { box-sizing: border-box; }
 
