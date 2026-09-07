@@ -62,41 +62,45 @@
    只换西文那一副（个别项连汉字一起换），因为拉丁排在前面，换它就是换整个
    界面的声气。--ui 由 --latin 与 --han 拼出，所以改这两个变量即可，不必
    把每条 font-family 再写一遍。?font=a 回到 Spectral。 */
-/* 一处要紧的坑：`--ui: var(--latin), var(--han)` 是在 :root 上算出来的。
+/* 选择器写成 .font-*，不是 body.font-*：这几条只设自定义属性，挂在哪一层
+   都算数，于是试装页可以把类挂在每个 <section> 上，一页并排七副。绑死在
+   body 上就只能一次看一副 —— 而一次看一副，正是「看起来都一样」的由来。
+
+   一处要紧的坑：`--ui: var(--latin), var(--han)` 是在 :root 上算出来的。
    自定义属性在**声明它的那个元素**上求值，所以在 body 上重定义 --latin
    根本改不动 :root 已经算好的 --ui —— 六副备选于是全部落回 Spectral，
    看上去一模一样。备选必须自己把 --ui 写全。 */
-body.font-b {                       /* 系统无衬线：SF / Segoe + 苹方 */
+.font-b {                       /* 系统无衬线：SF / Segoe + 苹方 */
   --ui: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
         "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
   --serif: var(--ui);
   --serif-en: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
-body.font-c {                       /* Helvetica + 黑体：像展签 */
+.font-c {                       /* Helvetica + 黑体：像展签 */
   --ui: "Helvetica Neue", Helvetica, Arial,
         "Heiti SC", "PingFang SC", "Noto Sans SC", sans-serif;
   --serif: var(--ui);
   --serif-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
-body.font-d {                       /* Avenir：西文圆润 */
+.font-d {                       /* Avenir：西文圆润 */
   --ui: "Avenir Next", Avenir, "Segoe UI",
         "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
   --serif: var(--ui);
   --serif-en: "Avenir Next", Avenir, "Segoe UI", sans-serif;
 }
-body.font-e {                       /* Georgia + 宋体：仍是衬线，另一种口音 */
+.font-e {                       /* Georgia + 宋体：仍是衬线，另一种口音 */
   --ui: Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", serif;
   --serif: var(--ui);
   --serif-en: Georgia, "Times New Roman", serif;
 }
-body.font-f {                       /* Verdana：为屏幕画的，小字最经得起 */
+.font-f {                       /* Verdana：为屏幕画的，小字最经得起 */
   --ui: Verdana, Tahoma, "DejaVu Sans",
         "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --serif: var(--ui);
   --serif-en: Verdana, Tahoma, sans-serif;
   --track-nav: .5px; --track-label: .5px; --track-title: 1px;   /* 它本就宽 */
 }
-body.font-g {                       /* Optima：人文无衬线，笔画有粗细 */
+.font-g {                       /* Optima：人文无衬线，笔画有粗细 */
   --ui: Optima, Candara, "Gill Sans", "Segoe UI",
         "Songti SC", "Noto Serif SC", sans-serif;
   --serif: var(--ui);
