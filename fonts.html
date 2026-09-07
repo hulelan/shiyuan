@@ -13,7 +13,14 @@ body{ padding:0 0 60px }
 .sheet{ max-width:940px; margin:0 auto; padding:0 20px }
 h1.pt{ font-size:19px; letter-spacing:4px; color:var(--cinnabar); margin:26px 0 4px }
 .lede{ color:var(--ink-soft); font-size:12.5px; margin:0 0 22px; max-width:60ch }
-.spec{ border-top:1px solid var(--line); padding:18px 0 22px }
+/* Each section must set font-family itself. Redefining --ui inside it does not
+   reach back and change the font-family already computed on <body>: what an
+   element inherits is the resolved family, not the var() that produced it.
+   On the site proper the class sits on <body>, which does declare
+   font-family:var(--serif), so ?font= works there -- it is only a specimen
+   page, showing several at once, that needs this line. */
+.spec{ border-top:1px solid var(--line); padding:18px 0 22px; font-family:var(--ui) }
+.spec .en{ font-family:var(--serif-en) }
 .spec.on{ background:color-mix(in srgb, var(--gold) 7%, transparent) }
 .hd{ display:flex; align-items:baseline; gap:10px; margin-bottom:12px }
 .key{ font:11px/1 ui-monospace,Menlo,monospace; letter-spacing:1px; color:var(--cinnabar);
