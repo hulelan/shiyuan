@@ -62,29 +62,51 @@
    只换西文那一副（个别项连汉字一起换），因为拉丁排在前面，换它就是换整个
    界面的声气。--ui 由 --latin 与 --han 拼出，所以改这两个变量即可，不必
    把每条 font-family 再写一遍。?font=a 回到 Spectral。 */
-body.font-b {                       /* 系统无衬线：苹方 / SF / Segoe */
-  --latin: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --han: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* 选择器写成 .font-*，不是 body.font-*：这几条只设自定义属性，挂在哪一层
+   都算数，于是试装页可以把类挂在每个 <section> 上，一页并排七副。绑死在
+   body 上就只能一次看一副 —— 而一次看一副，正是「看起来都一样」的由来。
+
+   一处要紧的坑：`--ui: var(--latin), var(--han)` 是在 :root 上算出来的。
+   自定义属性在**声明它的那个元素**上求值，所以在 body 上重定义 --latin
+   根本改不动 :root 已经算好的 --ui —— 六副备选于是全部落回 Spectral，
+   看上去一模一样。备选必须自己把 --ui 写全。 */
+.font-b {                       /* 系统无衬线：SF / Segoe + 苹方 */
+  --ui: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+        "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+  --serif: var(--ui);
+  --serif-en: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
-body.font-c {                       /* Helvetica + 黑体：像展签 */
-  --latin: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --han: "Heiti SC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+.font-c {                       /* Helvetica + 黑体：像展签 */
+  --ui: "Helvetica Neue", Helvetica, Arial,
+        "Heiti SC", "PingFang SC", "Noto Sans SC", sans-serif;
+  --serif: var(--ui);
+  --serif-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
-body.font-d {                       /* Avenir：西文圆润，汉字仍用苹方 */
-  --latin: "Avenir Next", Avenir, "Segoe UI", sans-serif;
-  --han: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+.font-d {                       /* Avenir：西文圆润 */
+  --ui: "Avenir Next", Avenir, "Segoe UI",
+        "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+  --serif: var(--ui);
+  --serif-en: "Avenir Next", Avenir, "Segoe UI", sans-serif;
 }
-body.font-e {                       /* Georgia + 宋体：仍是衬线，另一种口音 */
-  --latin: Georgia, "Times New Roman", serif;
+.font-e {                       /* Georgia + 宋体：仍是衬线，另一种口音 */
+  --ui: Georgia, "Times New Roman", "Songti SC", "Noto Serif SC", serif;
+  --serif: var(--ui);
+  --serif-en: Georgia, "Times New Roman", serif;
 }
-body.font-f {                       /* Verdana：为屏幕画的，小字最经得起 */
-  --latin: Verdana, Tahoma, "DejaVu Sans", sans-serif;
-  --han: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  letter-spacing: 0;                /* 它本来就宽，再加字距就散 */
+.font-f {                       /* Verdana：为屏幕画的，小字最经得起 */
+  --ui: Verdana, Tahoma, "DejaVu Sans",
+        "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --serif: var(--ui);
+  --serif-en: Verdana, Tahoma, sans-serif;
+  --track-nav: .5px; --track-label: .5px; --track-title: 1px;   /* 它本就宽 */
 }
-body.font-g {                       /* Optima：人文无衬线，笔画有粗细，配宋体不违和 */
-  --latin: Optima, Candara, "Gill Sans", "Segoe UI", sans-serif;
+.font-g {                       /* Optima：人文无衬线，笔画有粗细 */
+  --ui: Optima, Candara, "Gill Sans", "Segoe UI",
+        "Songti SC", "Noto Serif SC", sans-serif;
+  --serif: var(--ui);
+  --serif-en: Optima, Candara, "Gill Sans", sans-serif;
 }
+/* 诗行不参加试装：那是正文，永远宋体。--serif-poem 六副都不动。 */
 
 /* ---- 字距 --------------------------------------------------------------
      汉字是方块，2–3px 的间隙让它透气，是排汉字的常识。
