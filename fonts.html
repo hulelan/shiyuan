@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>字体试装 · 诗渊</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* Each specimen is one <section> carrying a font-* class, so what you see is
+   exactly what the site would do -- no restating of the stacks here, which is
+   the only way a specimen page can drift from the thing it claims to show. */
+body{ padding:0 0 60px }
+.sheet{ max-width:940px; margin:0 auto; padding:0 20px }
+h1.pt{ font-size:19px; letter-spacing:4px; color:var(--cinnabar); margin:26px 0 4px }
+.lede{ color:var(--ink-soft); font-size:12.5px; margin:0 0 22px; max-width:60ch }
+.spec{ border-top:1px solid var(--line); padding:18px 0 22px }
+.spec.on{ background:color-mix(in srgb, var(--gold) 7%, transparent) }
+.hd{ display:flex; align-items:baseline; gap:10px; margin-bottom:12px }
+.key{ font:11px/1 ui-monospace,Menlo,monospace; letter-spacing:1px; color:var(--cinnabar);
+      border:1px solid var(--line); padding:4px 7px; border-radius:2px }
+.nm{ font-size:13px; color:var(--ink) }
+.st{ font:10px/1.4 ui-monospace,Menlo,monospace; color:var(--ink-soft); opacity:.7;
+     margin-left:auto; text-align:right; max-width:48% }
+.row{ display:grid; grid-template-columns:1fr 1fr; gap:18px }
+@media(max-width:720px){ .row{ grid-template-columns:1fr } }
+.ui-l{ font-size:14px; letter-spacing:var(--track-nav); margin-bottom:6px }
+.ui-s{ font-size:11px; letter-spacing:var(--track-label); color:var(--ink-soft) }
+.en{ font-size:13px; line-height:1.6; color:var(--ink) }
+.num{ font-size:13px; letter-spacing:var(--track-label); color:var(--ink-soft) }
+.verse{ font-family:var(--serif-poem); font-size:17px; letter-spacing:3px; line-height:1.9 }
+.note{ color:var(--ink-soft); font-size:11.5px; margin-top:14px }
+a.back{ font-size:12px; color:var(--jade); text-decoration:none; border-bottom:1px solid var(--line) }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1 class="pt">字体试装</h1>
+  <p class="lede">七副并排，同一段字。每一格挂的就是站上那个 <code>?font=</code> 的类，
+    所以看到的即是切过去的样子。诗行不参加试装 —— 那是正文，六副都用宋体。
+    <a class="back" href="index.html">回诗渊</a></p>
+  <div id="specs"></div>
+  <p class="note">选定之后告诉我哪一副，我把它设成默认，并把角标撤掉。</p>
+</div>
+<script>
+var FONTS=[
+  ['a','Spectral + 宋体（现行）',''],
+  ['b','系统无衬线 + 苹方','SF / Segoe / Roboto'],
+  ['c','Helvetica + 黑体','像展签'],
+  ['d','Avenir + 苹方','西文圆润'],
+  ['e','Georgia + 宋体','仍是衬线，另一种口音'],
+  ['f','Verdana + 苹方','为屏幕画的，小字最经得起'],
+  ['g','Optima + 宋体','人文无衬线，笔画有粗细']
+];
+var EN='Along the river of time, watch classical Chinese move from the four-word '+
+       'lines of the Book of Songs to the regulated verse of the Tang.';
+var host=document.getElementById('specs');
+FONTS.forEach(function(f){
+  var k=f[0], s=document.createElement('section');
+  s.className='spec'+(k==='a'?'':' font-'+k);
+  var probe=document.createElement('span');
+  s.innerHTML=
+    '<div class="hd"><span class="key">?font='+k+'</span>'+
+      '<span class="nm">'+f[1]+'</span>'+
+      '<span class="st" data-st></span></div>'+
+    '<div class="row">'+
+      '<div>'+
+        '<div class="ui-l">诗渊　古诗古文 · 溯源</div>'+
+        '<div class="ui-s">时间之河 · 地图 · 字表 · 体裁 · 主题</div>'+
+        '<div class="num">先秦 1198 篇　唐 2142 篇　宋 502 篇　960–1279</div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="en">'+EN+'</div>'+
+        '<div class="num">Tang 2,142 · Song 502 · 1127–1279 · 24.9%</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="verse">空山新雨后，天气晚来秋。</div>';
+  host.appendChild(s);
+  // report what the browser actually resolved, so a face that is not installed
+  // cannot masquerade as a choice
+  var el=s.querySelector('.ui-l');
+  var want=getComputedStyle(el).fontFamily.split(',')[0].replace(/["']/g,'');
+  var got=(document.fonts && document.fonts.check)
+    ? (document.fonts.check('14px "'+want+'"') ? want : want+' — 未安装，已回退')
+    : want;
+  s.querySelector('[data-st]').textContent=got+(f[2]?' · '+f[2]:'');
+});
+</script>
+</body>
+</html>

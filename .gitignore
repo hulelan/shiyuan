@@ -21,3 +21,11 @@ __pycache__/
 data/.embed_cache/
 .venv-ml/
 tools/.cache/canon/
+
+# 展览细部照的原片：手机直出一张三五兆，一场展两百张就是一个 G。
+# 进了 history 就删不干净，每次 clone 都得拖一遍。只提交 web/ 下缩过的派生图。
+# 这儿不是备份 —— 原片自己另存一份。详见 assets/art/details/README.md
+assets/art/details/*/photos/*
+!assets/art/details/*/photos/.gitkeep
+assets/art/details/_inbox/*
+!assets/art/details/_inbox/.gitkeep

@@ -1,0 +1,24 @@
+{
+  "slug": "qianli-jiangshan",
+  "title": "千里江山图",
+  "artist": "王希孟",
+  "dynasty": "北宋",
+  "credit": "故宫博物院",
+  "poem": "e025a1267aa1",
+
+  "base": {
+    "file": "assets/art/e025a1267aa1.jpg",
+    "w": 800,
+    "h": 600,
+    "whole": false,
+    "note": "站上现有的这张是局部，且只有 800×600。配准要的是全画的高清底图 —— 这张顶多够试通流程，钉不准细部。"
+  },
+
+  "exhibition": {
+    "name": "",
+    "venue": "",
+    "shot": ""
+  },
+
+  "photos": []
+}
