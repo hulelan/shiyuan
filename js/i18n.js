@@ -39,7 +39,7 @@ window.T = (function () {
     /* 顶栏的下拉。每一项带一句说明，展开时才看得到 */
     "更多视角": "Perspectives",
     "按朝代翻卡片": "Browse by dynasty",
-    "一人一生的笔墨": "A poet's whole hand",
+    "一人一生的笔墨": "Everything one poet wrote",
     "四言、律诗、词、曲": "Four-character verse, regulated verse, ci, qu",
     "送别、思乡、田园": "Parting, homesickness, the countryside",
     "循一个字走进诗篇": "Follow a single character",
@@ -65,7 +65,7 @@ window.T = (function () {
     "全部": "All",
     "共 {n} 篇": "{n} works",
     "显示更多（还有 {n} 篇）": "Show more ({n} remaining)",
-    "没取到，点此重试": "Failed — click to retry",
+    "没取到，点此重试": "Failed. Click to retry",
     "这里还没有作品。": "Nothing here yet.",
     "收起": "Show fewer",
 
@@ -75,10 +75,10 @@ window.T = (function () {
 
     /* ---- 作者 ---- */
     "一人一生的笔墨，聚在一处看，才见得出脾气。按朝代筛选，或直接搜名字。":
-      "A poet's whole hand, gathered in one place. Filter by dynasty, or search a name.",
-    "搜索作者，如 李白、苏轼…": "Search a poet — 李白, 苏轼…",
+      "Everything one poet wrote, gathered in one place; that is where the temperament shows. Filter by dynasty, or search a name.",
+    "搜索作者，如 李白、苏轼…": "Search a poet: 李白, 苏轼…",
     "共 {n} 位": "{n} poets",
-    "（显示前 600，可搜索缩小范围）": " (first 600 shown — search to narrow)",
+    "（显示前 600，可搜索缩小范围）": " (first 600 shown; search to narrow)",
     "‹ 作者索引": "‹ All poets",
     "共收录 <b>{n}</b> 篇": "<b>{n}</b> works collected",
     "多作": "mostly",
@@ -90,62 +90,62 @@ window.T = (function () {
     "选一项，看归入其下的作品。": "Pick one to see the works filed under it.",
     "更多主题（共 {n} 个）": "More themes ({n} in all)",
     "从《诗经》的四言，到楚辞、乐府、古体诗，再到唐人格律严整的近体诗，乃至宋词元曲——诗体的演进，就是一部文言文的呼吸史。体裁由每首作品的句式自动归类。":
-      "From the four-character lines of the Book of Songs through Chu ci, yuefu and old-style verse, to the strict regulated forms of the Tang and the song lyrics of the Song and Yuan. Form is assigned automatically from each poem's line structure.",
+      "It starts with the four-character lines of the Book of Songs, then Chu ci, yuefu and old-style verse, then the strict regulated forms of the Tang and the song lyrics of the Song and Yuan. Each poem's line structure decides its form.",
     "按主题浏览——爱情、田园、送别、忧国……看古人如何在同一母题下各抒其怀。":
-      "Browse by theme — love, the countryside, parting, grief for the state. Theme labels stay in Chinese.",
+      "Browse by theme: love, the countryside, parting, grief for the state. Theme labels stay in Chinese.",
     "主题词由模型逐篇标注，尚无统一词表，长尾较杂。":
-      "Themes are labelled per poem by a model, with no controlled vocabulary yet — the long tail is messy.",
+      "A model labels the themes one poem at a time. There is no controlled vocabulary yet, so the long tail is messy.",
 
     /* ---- 字词 ---- */
     "古人炼字，一字千金。这里可循一个字走进无数诗篇——看\"月\"如何照过千年，\"风\"如何吹遍江山。":
-      "One character at a time. Follow a single graph through the corpus — how 月 (moon) has shone for a thousand years, where 风 (wind) blows.",
+      "The old poets weighed every character. Follow one through the corpus: how 月 (moon) has shone for a thousand years, where 风 (wind) blows.",
     "已为最常见的 {a} 个字建立索引（全库共 {b} 个不同字）；每字最多列 {c} 例，且跨朝代抽样，不是只取最早的几篇。":
-      "The {a} most common characters are indexed (the corpus has {b} distinct ones). At most {c} examples per character, sampled across dynasties rather than taken from the earliest works.",
-    "输入一个字，如 月、风、江…": "Enter one character — 月, 风, 江…",
-    "点一个字，看它在诗篇中的身影。": "Pick a character to see it at work.",
+      "The index covers the {a} most common characters; the corpus has {b} distinct ones. Each character shows at most {c} examples, sampled across dynasties rather than taken from the earliest works.",
+    "输入一个字，如 月、风、江…": "Enter one character: 月, 风, 江…",
+    "点一个字，看它在诗篇中的身影。": "Pick a character to see it in the poems.",
     "\"{c}\" 不在索引内——它在全库中出现得较少。":
-      "\"{c}\" is not indexed — it is uncommon in the corpus.",
+      "\"{c}\" is not indexed. It is uncommon in the corpus.",
     "\"<b>{c}</b>\" 现身于 <b>{n}</b> 篇": "\"<b>{c}</b>\" appears in <b>{n}</b> works",
     "，以下列出其中 {n} 例（跨朝代抽样）": ", showing {n} of them (sampled across dynasties)",
 
     /* ---- 时间轴 ---- */
     "沿着时间之河，看文言文从《诗经》的四言到唐诗的格律、宋词的长短句，如何一路演变。":
-      "Down the river of time: four-character verse, Tang regulation, Song long-and-short lines.",
+      "Down the river of time: the four-character lines of the Book of Songs, the regulated verse of the Tang, the long-and-short lines of Song ci.",
     "浅色的朝代尚未逐篇断代，只能按朝代整体定位。":
-      "Dimmed dynasties have not been dated poem by poem — they are placed by dynasty as a whole.",
+      "Dimmed dynasties sit where the dynasty as a whole sits, not where each poem falls.",
     "尚未逐篇断代": "not yet dated per poem",
     "虚线的朝代按作者生卒估算 —— 画的是诗人活在什么时候，不是这首诗写于哪一年。":
-      "Dashed dynasties are placed by the poet's dates \u2014 the shape shows when the poets lived, not when each poem was written.",
+      "Dashed dynasties follow the poet's dates. The shape shows when the poets lived, not when each poem was written.",
     "按作者生卒估算": "placed by the poet's dates",
     "{d} 年代 · {n} 篇": "{d}s · {n} works",
     "{n} 篇": "{n} works",
 
     /* ---- 地图 ---- */
     "每一首诗都诞生在具体的山川之间。点击标记，看看哪些名篇写于同一片土地。":
-      "Every poem was written somewhere. Click a marker to see what was written on the same ground.",
+      "Every poem was written somewhere. Click a marker to see what else came from the same ground.",
     "地图组件需要联网加载（Leaflet / OpenStreetMap）。":
       "The map needs a network connection (Leaflet / OpenStreetMap).",
     "连上网络后刷新页面即可查看诗文的地理分布。":
-      "Reload once you are online to see the geography.",
+      "Reload once you are online to see where the poems were written.",
     "其余功能均可离线使用。": "Everything else works offline.",
     "标记内数字为该地留存的诗文篇数；共 {n} 篇有据可考。":
-      "The number in each marker is how many works survive from that place; {n} works are locatable.",
+      "The number in each marker is how many works survive there; {n} works in all have a known place.",
     "全览": "All time",
-    "不分时间，{n} 篇": "All periods — {n} works",
+    "不分时间，{n} 篇": "All periods, {n} works",
     "{a} – {b} 年": "{a} – {b}",
     "前{n}": "{n} BCE",
     "此档无诗": "nothing in this window",
     "此档 {n} 篇": "{n} works in this window",
     "另有 {n} 篇只知朝代、不知确年，按年筛选时不计入。":
-      "A further {n} works are known only by dynasty, not by year; they are left out when filtering by time.",
-    "拖动滑块，每档五十年": "Drag the slider — fifty years per step",
+      "A further {n} works are known only by dynasty, not by year; the time filter leaves them out.",
+    "拖动滑块，每档五十年": "Drag the slider, fifty years per step",
 
     /* ---- 检索 ---- */
     "\"<b>{q}</b>\" 命中 <b>{n}</b> 条": "<b>{n}</b> matches for \"<b>{q}</b>\"",
     "检索范围为标题与作者；正文暂未建索引。":
       "Search covers titles and poets only; the poem texts are not indexed yet.",
     "标题、作者与正文都在检索范围内，按相关度排序。":
-      "Titles, poets and poem texts are all searched, ranked by relevance.",
+      "Search covers titles, poets and the poem texts, ranked by relevance.",
     "没有匹配的标题或作者。": "No matching title or poet.",
     "没有匹配的作品。": "Nothing matched.",
     "仅显示前 300 条": "First 300 shown",

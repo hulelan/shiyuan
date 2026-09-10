@@ -6,9 +6,8 @@
 <title>字体试装 · 诗渊</title>
 <link rel="stylesheet" href="css/style.css?b=349eda1">
 <style>
-/* Each specimen is one <section> carrying a font-* class, so what you see is
-   exactly what the site would do -- no restating of the stacks here, which is
-   the only way a specimen page can drift from the thing it claims to show. */
+/* 每一格是一个 <section>，挂的就是站上那个 font-* 类。字体栈只在
+   css/style.css 里写一遍，这里不抄。抄一遍，试装页迟早跟站上对不上。 */
 body{ padding:0 0 60px }
 .sheet{ max-width:940px; margin:0 auto; padding:0 20px }
 h1.pt{ font-size:19px; letter-spacing:4px; color:var(--cinnabar); margin:26px 0 4px }
@@ -40,17 +39,17 @@ a.back{ font-size:12px; color:var(--jade); text-decoration:none; border-bottom:1
 <div class="sheet">
   <h1 class="pt">字体试装</h1>
   <p class="lede">七副并排，同一段字。每一格挂的就是站上那个 <code>?font=</code> 的类，
-    所以看到的即是切过去的样子。诗行不参加试装 —— 那是正文，六副都用宋体。
+    所以看到的即是切过去的样子。诗行不参加试装 —— 那是正文，七副都用宋体。
     <a class="back" href="index.html">回诗渊</a></p>
   <div id="specs"></div>
   <p class="note">选定之后告诉我哪一副，我把它设成默认，并把角标撤掉。</p>
 </div>
 <script>
 var FONTS=[
-  ['a','Spectral + 宋体（现行）',''],
+  ['a','Spectral + 宋体（从前的默认）',''],
   ['b','系统无衬线 + 苹方','SF / Segoe / Roboto'],
   ['c','Helvetica + 黑体','像展签'],
-  ['d','Avenir + 苹方','西文圆润'],
+  ['d','Avenir + 苹方（现行）','西文圆润'],
   ['e','Georgia + 宋体','仍是衬线，另一种口音'],
   ['f','Verdana + 苹方','为屏幕画的，小字最经得起'],
   ['g','Optima + 宋体','人文无衬线，笔画有粗细']
@@ -60,7 +59,7 @@ var EN='Along the river of time, watch classical Chinese move from the four-word
 var host=document.getElementById('specs');
 FONTS.forEach(function(f){
   var k=f[0], s=document.createElement('section');
-  s.className='spec'+(k==='a'?'':' font-'+k);
+  s.className='spec font-'+k;
   var probe=document.createElement('span');
   s.innerHTML=
     '<div class="hd"><span class="key">?font='+k+'</span>'+
@@ -79,8 +78,8 @@ FONTS.forEach(function(f){
     '</div>'+
     '<div class="verse">空山新雨后，天气晚来秋。</div>';
   host.appendChild(s);
-  // report what the browser actually resolved, so a face that is not installed
-  // cannot masquerade as a choice
+  // 报出浏览器真正用上的那一副。本机没装的字体会静悄悄回退，
+  // 不标出来，挑中的就可能只是回退的结果。
   var el=s.querySelector('.ui-l');
   var want=getComputedStyle(el).fontFamily.split(',')[0].replace(/["']/g,'');
   var got=(document.fonts && document.fonts.check)

@@ -37,39 +37,58 @@
      英文就永远由它来排。浏览器是逐字回退的 —— 拉丁走前面的西文字体，
      汉字落到后面的中文字体，两不相干。
 
-     为什么西文选衬线而不是系统无衬线：这是一个古籍站，正文是宋体。
-     界面全换成 SF Pro 一类的系统无衬线，等于给一卷手卷配了个 App 边框 ——
-     英文是不难看了，但整站的声气散了。
+     界面用 Avenir + 苹方（试装页里的 d），并排看过七副之后定的。
+     诗行不跟着走：正文永远是宋体，见下面的 --han-song。于是分工是
+     「界面无衬线、正文衬线」，界面退到一边，诗行仍是这一站的主角。
 
-     选定 Spectral（自托管，见 css/fonts.css）。它是为屏幕画的衬线，
-     字面略窄、笔画匀，界面里那些 11–14px 的小字最吃这一点。
-     从前用 Iowan Old Style 是只有苹果设备才有的，Windows 的访客一路
-     回退到 Georgia —— 等于两拨人看的是两个站。自托管之后哪儿都一样。 */
-  --latin: "Spectral", Georgia, "Times New Roman", serif;
-  --han:   "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
+     从前默认是自托管的 Spectral（衬线），现在退成 ?font=a。
+     css/fonts.css 里那六个 @font-face 因此留着 —— 不选 a 就不会下载，
+     浏览器只在字体真被用到时才取。
+
+     Avenir 不是每台机器都有：Windows 落到 Segoe UI，Linux 落到通用
+     sans-serif。三者都是人文无衬线，回退了也还在一个调子上。 */
+  --latin: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  --han:   "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+  /* 诗行那一副单列。界面换过几轮，正文一直是宋体，两者不该共用一个变量。 */
+  --han-song: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", "SimSun", serif;
 
   --ui:        var(--latin), var(--han);   /* 界面：导航、按钮、说明 */
   --serif:     var(--ui);                  /* 旧名，全站还在用，指向同一副 */
-  --serif-en:  var(--latin), serif;        /* 纯西文段落（英译） */
-  --serif-poem: var(--han), Georgia, serif; /* 诗行：正文，汉字打头 */
+  --serif-en:  var(--latin), sans-serif;   /* 纯西文段落（英译） */
+  --serif-poem: var(--han-song), Georgia, serif; /* 诗行：正文，汉字打头 */
 
-  #fontTag { position: fixed; left: 10px; bottom: 9px; z-index: 90;
+  /* ---- 字距 --------------------------------------------------------------
+     汉字是方块，2–3px 的间隙让它透气，是排汉字的常识。
+     同样的间隙落到拉丁字母上，词就散成一个个字母 —— "Other ways in"
+     读起来像招牌不像句子。所以字距必须跟着语言走，而不是写死在每条规则里。
+     下面三档给界面用；诗行的字距另算（那永远是汉字）。 */
+  --track-nav:   2px;    /* 导航、标签页 */
+  --track-label: 1.5px;  /* 小标签、脚注、计数 */
+  --track-title: 3px;    /* 栏目标题、印章 */
+}
+
+#fontTag { position: fixed; left: 10px; bottom: 9px; z-index: 90;
   font: 10px/1 ui-monospace, Menlo, monospace; letter-spacing: 1px;
   color: var(--ink-soft); opacity: .45; pointer-events: none; }
 #fontTag:hover { opacity: .8 }
 
-/* ---- 试装：?font=b…g -----------------------------------------------------
+/* ---- 试装：?font=a…g -----------------------------------------------------
    只换西文那一副（个别项连汉字一起换），因为拉丁排在前面，换它就是换整个
-   界面的声气。--ui 由 --latin 与 --han 拼出，所以改这两个变量即可，不必
-   把每条 font-family 再写一遍。?font=a 回到 Spectral。 */
+   界面的声气。d 就是现在 :root 上那一副，所以 ?font=d 等于不试装。 */
 /* 选择器写成 .font-*，不是 body.font-*：这几条只设自定义属性，挂在哪一层
    都算数，于是试装页可以把类挂在每个 <section> 上，一页并排七副。绑死在
    body 上就只能一次看一副 —— 而一次看一副，正是「看起来都一样」的由来。
 
    一处要紧的坑：`--ui: var(--latin), var(--han)` 是在 :root 上算出来的。
    自定义属性在**声明它的那个元素**上求值，所以在 body 上重定义 --latin
-   根本改不动 :root 已经算好的 --ui —— 六副备选于是全部落回 Spectral，
-   看上去一模一样。备选必须自己把 --ui 写全。 */
+   根本改不动 :root 已经算好的 --ui —— 备选于是全部落回默认那一副，
+   看上去一模一样。每副备选必须自己把 --ui 写全。 */
+.font-a {                       /* Spectral + 宋体：从前的默认 */
+  --ui: "Spectral", Georgia, "Times New Roman",
+        "Songti SC", "STSong", "Noto Serif SC", "SimSun", serif;
+  --serif: var(--ui);
+  --serif-en: "Spectral", Georgia, "Times New Roman", serif;
+}
 .font-b {                       /* 系统无衬线：SF / Segoe + 苹方 */
   --ui: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
         "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
@@ -82,7 +101,8 @@
   --serif: var(--ui);
   --serif-en: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
-.font-d {                       /* Avenir：西文圆润 */
+.font-d {                       /* Avenir：西文圆润。与 :root 同一副，
+                                   留着是为了试装页能把七副并排 */
   --ui: "Avenir Next", Avenir, "Segoe UI",
         "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
   --serif: var(--ui);
@@ -106,17 +126,8 @@
   --serif: var(--ui);
   --serif-en: Optima, Candara, "Gill Sans", sans-serif;
 }
-/* 诗行不参加试装：那是正文，永远宋体。--serif-poem 六副都不动。 */
+/* 诗行不参加试装：那是正文，永远宋体。--serif-poem 七副都不动。 */
 
-/* ---- 字距 --------------------------------------------------------------
-     汉字是方块，2–3px 的间隙让它透气，是排汉字的常识。
-     同样的间隙落到拉丁字母上，词就散成一个个字母 —— "Other ways in"
-     读起来像招牌不像句子。所以字距必须跟着语言走，而不是写死在每条规则里。
-     下面三档给界面用；诗行的字距另算（那永远是汉字）。 */
-  --track-nav:   2px;    /* 导航、标签页 */
-  --track-label: 1.5px;  /* 小标签、脚注、计数 */
-  --track-title: 3px;    /* 栏目标题、印章 */
-}
 
 /* ---- 英文界面 ------------------------------------------------------------
    只改字距与行高，不再用 !important 一揽子压。

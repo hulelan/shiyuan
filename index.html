@@ -67,18 +67,17 @@
   </footer>
 
   <script>
-  /* 字体试装：?font=b|c|d|e 换一副无衬线，记在本机；?font=a 回到宋体。
-     只改 --serif 一个变量，全站跟着走。 */
+  /* 字体试装：?font=a…g 换一副，记在本机。d（Avenir + 苹方）是现行的默认，
+     所以 ?font=d 等于清掉试装。这几个类只重定义 --ui / --serif，全站跟着走。 */
   (function () {
-    var m = /[?&]font=([a-e])/.exec(location.search);
+    var m = /[?&]font=([a-g])/.exec(location.search);
     if (m) { try { localStorage.setItem("sy_font", m[1]); } catch (e) {} }
     var f = m ? m[1] : (function(){ try { return localStorage.getItem("sy_font"); } catch(e){ return null; } })();
-    if (f && f !== "a") {
+    if (f && f !== "d") {
       document.body.classList.add("font-" + f);
-      /* The tag is back while the trying is on: with six alternates you cannot
-         tell d from g by eye after a page change, and a guess is not a choice.
-         ?font=a clears it. */
-      var NAME = { b: "系统无衬线", c: "Helvetica + 黑体", d: "Avenir + 苹方",
+      /* 试装期间挂个角标。七副里有几副换页之后光凭眼睛分不出来，
+         不标出来就只能靠猜。?font=d 回到默认，角标随之消失。 */
+      var NAME = { a: "Spectral + 宋体", b: "系统无衬线", c: "Helvetica + 黑体",
                    e: "Georgia + 宋体", f: "Verdana", g: "Optima" };
       var tag = document.createElement("div");
       tag.id = "fontTag";
