@@ -449,7 +449,7 @@
   }
 
   // ---------- 体裁 / 主题：同一套「先选键，再列作品」 ----------
-  function facetView(hostSel, load, keyOf, labelOf, groupOf, intro, current, onPick) {
+  function facetView(hostSel, load, keyOf, labelOf, groupOf, current, onPick) {
     var host = $(hostSel), ok = guard();
     loading(host);
     load().then(function (metas) {
@@ -524,7 +524,6 @@
         });
       },
       function (m) { return m.k; }, function (m) { return m.n; }, function (m) { return m.g; },
-      T("从《诗经》的四言，到楚辞、乐府、古体诗，再到唐人格律严整的近体诗，乃至宋词元曲——诗体的演进，就是一部文言文的呼吸史。体裁由每首作品的句式自动归类。"),
       key, function (k) { go("/type/" + k); });
   }
 
@@ -539,8 +538,6 @@
         });
       },
       function (m) { return m.k; }, function (m) { return m.n; }, function () { return ""; },
-      T("按主题浏览——爱情、田园、送别、忧国……看古人如何在同一母题下各抒其怀。") +
-      '<br><small class="caveat">' + T("主题词由模型逐篇标注，尚无统一词表，长尾较杂。") + '</small>',
       key, function (k) { go("/theme/" + k); });
   }
   function goThemeByName(name) {
@@ -558,10 +555,6 @@
     Store.charSummary().then(function (sum) {
       if (!ok()) return;
       host.innerHTML =
-        '<p class="view-intro">' +
-        '<small class="caveat">' +
-        T("已为最常见的 {a} 个字建立索引（全库共 {b} 个不同字）；每字最多列 {c} 例，且跨朝代抽样，不是只取最早的几篇。",
-          { a: sum.indexed, b: sum.distinct, c: sum.maxHits }) + '</small></p>' +
         '<div class="word-search"><input type="search" id="wordInput" placeholder="' +
         T("输入一个字，如 月、风、江…") + '" autocomplete="off"></div>' +
         '<div class="char-cloud" id="charCloud"></div><div id="wordResult"></div>';
@@ -573,9 +566,12 @@
         if (v) go("/word/" + encodeURIComponent(v));
       });
 
+      // 虚词与小数目不上云图：不、之、也 之类人人皆知，点进去也看不出什么。
+      var STOP = "不之有无也曰其一二三如我以为何而于是者可在与自此去得矣将相乃则所已未亦且或焉乎哉耶欤兮复皆更还又即若莫使令彼谁孰他汝尔吾余予及与同共每各凡既但只";
       var cloud = $("#charCloud");
-      var max = sum.cloud[0].n, min = sum.cloud[sum.cloud.length - 1].n;
-      sum.cloud.slice(0, 80).forEach(function (c) {
+      var shown = sum.cloud.filter(function (c) { return STOP.indexOf(c.c) < 0; }).slice(0, 80);
+      var max = shown[0].n, min = shown[shown.length - 1].n;
+      shown.forEach(function (c) {
         var b = el("button", "cloud-char", esc(c.c));
         b.style.fontSize = (13 + Math.round(20 * (c.n - min) / Math.max(1, max - min))) + "px";
         b.title = T("{n} 篇", { n: c.n });
@@ -622,11 +618,6 @@
       var anyAuthor = bands.some(function (b) { return b.byAuthorOnly; });
       var anyLoose  = bands.some(function (b) { return !b.confident && !b.byAuthorOnly; });
       host.innerHTML =
-        ((anyAuthor || anyLoose) ? '<p class="view-intro"><small class="caveat">' +
-          (anyAuthor ? T("虚线的朝代按作者生卒估算 —— 画的是诗人活在什么时候，不是这首诗写于哪一年。") : "") +
-          (anyAuthor && anyLoose ? '<br>' : "") +
-          (anyLoose ? T("浅色的朝代尚未逐篇断代，只能按朝代整体定位。") : "") +
-          '</small></p>' : "") +
         '<div class="tl-bands" id="tlBands"></div><div id="tlDrill"></div>';
       var wrap = $("#tlBands");
       var peak = 1;
@@ -821,10 +812,7 @@
       showAll();
 
       $("#mapNote").innerHTML =
-        T("标记内数字为该地留存的诗文篇数；共 {n} 篇有据可考。", { n: places.length }) +
-        (undated ? '<br><small class="caveat">' +
-          T("另有 {n} 篇只知朝代、不知确年，按年筛选时不计入。", { n: undated }) +
-          '</small>' : "");
+        T("共 {n} 篇有据可考。", { n: places.length });
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
@@ -884,13 +872,10 @@
     var M = Store.manifest();
     var run = M && M.bm25Buckets ? Store.searchBM25(q) : Store.search(q);
     run.then(function (rows) {
-      if (!ok()) return;
       var ranked = M && M.bm25Buckets;
+      if (!ok()) return;
       host.innerHTML = '<p class="view-intro">' +
-        T('"<b>{q}</b>" 命中 <b>{n}</b> 条', { q: esc(q), n: rows.length }) +
-        '<br><small class="caveat">' +
-        T(ranked ? "标题、作者与正文都在检索范围内，按相关度排序。"
-                 : "检索范围为标题与作者；正文暂未建索引。") + '</small></p>' +
+        T('"<b>{q}</b>" 命中 <b>{n}</b> 条', { q: esc(q), n: rows.length }) + '</p>' +
         '<div id="searchBody"></div>';
       var body = $("#searchBody");
       if (!rows.length) {
@@ -1278,18 +1263,16 @@
   }
 
   /* ---------- 更多视角 ----------
-     首页留在顶栏，其余七种看法收进一个下拉。
-     每一项带一句话说明 —— 菜单一展开就有地方交代"这一栏是干嘛的"，
-     这是原先七个并排的标签给不了的。 */
+     首页留在顶栏，其余八种看法收进一个下拉。一个词一项，不加说明。 */
   var LENSES = [
-    { k: "library",  n: "诗文库",  d: "按朝代翻卡片" },
-    { k: "authors",  n: "作者",    d: "一人一生的笔墨" },
-    { k: "type",     n: "体裁",    d: "四言、律诗、词、曲" },
-    { k: "theme",    n: "主题",    d: "送别、思乡、田园" },
-    { k: "word",     n: "字词",    d: "循一个字走进诗篇" },
-    { k: "timeline", n: "时间轴",  d: "沿年份看诗体流变" },
-    { k: "map",      n: "地图",    d: "诗写在哪一片土地上" },
-    { k: "art",      n: "配画",    d: "配过画的那些篇" }
+    { k: "library",  n: "诗文库" },
+    { k: "authors",  n: "作者" },
+    { k: "type",     n: "体裁" },
+    { k: "theme",    n: "主题" },
+    { k: "word",     n: "字词" },
+    { k: "timeline", n: "时间轴" },
+    { k: "map",      n: "地图" },
+    { k: "art",      n: "配画" }
   ];
   var TAB_LABEL = { home: "首页" };
   LENSES.forEach(function (l) { TAB_LABEL[l.k] = l.n; });
@@ -1306,8 +1289,7 @@
     if (!menu) return;
     menu.innerHTML = LENSES.map(function (l) {
       return '<button class="lens-item" role="menuitem" data-view="' + l.k + '">' +
-        '<span class="li-n">' + esc(T(l.n)) + '</span>' +
-        '<span class="li-d">' + esc(T(l.d)) + '</span></button>';
+        '<span class="li-n">' + esc(T(l.n)) + '</span></button>';
     }).join("");
     menu.querySelectorAll(".lens-item").forEach(function (b) {
       b.addEventListener("click", function () {

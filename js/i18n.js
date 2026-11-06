@@ -36,17 +36,9 @@ window.T = (function () {
     "字词": "Words",
     "时间轴": "Timeline",
     "地图": "Map",
-    /* 顶栏的下拉。每一项带一句说明，展开时才看得到 */
+    /* 顶栏的下拉 */
     "更多视角": "Perspectives",
-    "按朝代翻卡片": "Browse by dynasty",
-    "一人一生的笔墨": "Everything one poet wrote",
-    "四言、律诗、词、曲": "Four-character verse, regulated verse, ci, qu",
-    "送别、思乡、田园": "Parting, homesickness, the countryside",
-    "循一个字走进诗篇": "Follow a single character",
-    "沿年份看诗体流变": "How the forms changed over time",
-    "诗写在哪一片土地上": "Where the poems were written",
     "配画": "With paintings",
-    "配过画的那些篇": "The ones that have a painting",
 
     /* ---- 两种读法 ---- */
     "卡片": "Cards",

@@ -905,12 +905,10 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
 .lens-item.on { background: color-mix(in srgb, var(--jade) 10%, transparent); }
 .lens-item.on .li-n { color: var(--jade); }
 .li-n { display: block; font-size: 13.5px; letter-spacing: var(--track-nav); color: var(--ink); }
-.li-d { display: block; font-size: 10.5px; letter-spacing: var(--track-label); color: var(--gold); margin-top: 2px; }
 
 @media (max-width: 640px) {
   .lens-btn { padding: 4px 8px; font-size: 12px; letter-spacing: var(--track-label); }
   .lens-menu { min-width: 200px; }
-  .li-d { display: none; }   /* 窄屏放不下说明，留名字就够 */
 }
 
 /* ============ 与此篇相近 ============ */
