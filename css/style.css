@@ -831,16 +831,27 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
 
 /* ============ 探索 ============ */
 /* 一条时间轴，一排筛子，左图右列。 */
-.ex-time { display: flex; gap: 3px; max-width: 1100px; margin: 4px auto 14px; user-select: none; -webkit-user-select: none; }
+.ex-time { max-width: 1100px; margin: 4px auto 14px; user-select: none; -webkit-user-select: none; }
+.ex-dyn { display: flex; gap: 3px; }
 .ex-seg {
-  flex: 1 1 0; min-width: 0; cursor: pointer; padding: 7px 4px 6px; text-align: center;
+  flex: 1 1 0; min-width: 0; cursor: pointer; padding: 7px 4px 6px; text-align: center; position: relative;
   border: 1px solid var(--line); background: var(--sheen); transition: background .16s, border-color .16s;
+  text-decoration: none; color: inherit;
 }
 .ex-seg b { display: block; font-weight: 400; font-size: 13px; letter-spacing: 2px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ex-seg i { display: block; font-style: normal; font-size: 9.5px; letter-spacing: .5px; color: var(--gold); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ex-seg:hover { border-color: var(--ink-soft); }
 .ex-seg.on { background: color-mix(in srgb, var(--cinnabar) 9%, transparent); border-color: var(--cinnabar-soft); }
 .ex-seg.on b { color: var(--cinnabar); }
+.ex-seg.gap { background: transparent; border-style: dashed; }
+.ex-seg.gap b { color: var(--gold); font-size: 11px; letter-spacing: 1px; }
+.ex-seg.gap:hover b { color: var(--cinnabar); }
+.ex-wiki { position: absolute; right: 4px; top: 2px; font-size: 10px; color: var(--gold); text-decoration: none; padding: 0 3px; }
+.ex-wiki:hover { color: var(--cinnabar); }
+.ex-ruler { display: block; width: 100%; height: 46px; cursor: ew-resize; margin-top: 2px; touch-action: none; }
+.ex-win { display: flex; gap: 6px; align-items: center; justify-content: flex-end; margin-top: 2px; }
+.ex-win span { font-size: 10.5px; letter-spacing: var(--track-label); color: var(--gold); margin-right: 2px; }
+.ex-w { padding: 1px 8px; font-size: 11px; }
 .ex-chips { max-width: 1100px; margin: 0 auto 18px; display: flex; flex-direction: column; gap: 8px; }
 .ex-forms, .ex-more { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .ex-poet input {
@@ -870,6 +881,7 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
   .ex-map { position: static; }
   #exMapCanvas { height: 300px; min-height: 0; }
   .ex-seg i { display: none; }
+  .ex-wiki { display: none; }
   .ex-seg b { font-size: 11.5px; letter-spacing: 0; }
 }
 

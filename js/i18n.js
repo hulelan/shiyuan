@@ -39,6 +39,9 @@ window.T = (function () {
     "配画": "With paintings",
     "诗人…": "Poet…",
     "清除筛选": "Clear filters",
+    "窗宽": "Window",
+    "维基百科": "Wikipedia",
+    "库中无此时期作品，点开维基百科": "No works from this period here. Opens Wikipedia.",
     "{n} 处": "{n} places",
 
     /* ---- 两种读法 ---- */

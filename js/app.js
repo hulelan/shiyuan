@@ -217,15 +217,16 @@
      换筛子只是重画，不再取数。地址里带着筛子（#/explore?d=6-8&f=七绝&a=李白），
      所以一个筛好的列表可以直接分享。 */
   var EX = null, exBuilt = false, exMap = null, exLayer = null, exRows = [], exShown = 0;
-  var exState = { d: null, f: null, a: null, p: null, art: false };
+  var exState = { d: null, y: null, f: null, a: null, p: null, art: false };
   var EX_PAGE = 90;
 
   function exParse(q) {
-    var s = { d: null, f: null, a: null, p: null, art: false };
+    var s = { d: null, y: null, f: null, a: null, p: null, art: false };
     (q || "").split("&").forEach(function (kv) {
       var i = kv.indexOf("="); if (i < 0) return;
       var k = kv.slice(0, i), v = decodeURIComponent(kv.slice(i + 1));
       if (k === "d") { var m = /^(-?\d+)(?:-(-?\d+))?$/.exec(v); if (m) s.d = [+m[1], +(m[2] || m[1])]; }
+      else if (k === "y") { var my = /^(-?\d+)~(-?\d+)$/.exec(v); if (my) s.y = [+my[1], +my[2]]; }
       else if (k === "f") s.f = v;
       else if (k === "a") s.a = v;
       else if (k === "p") s.p = +v;
@@ -236,6 +237,7 @@
   function exQuery(s) {
     var q = [];
     if (s.d) q.push("d=" + (s.d[0] === s.d[1] ? s.d[0] : s.d[0] + "-" + s.d[1]));
+    if (s.y) q.push("y=" + s.y[0] + "~" + s.y[1]);
     if (s.f) q.push("f=" + encodeURIComponent(s.f));
     if (s.a) q.push("a=" + encodeURIComponent(s.a));
     if (s.p != null) q.push("p=" + s.p);
@@ -254,6 +256,7 @@
   function exMatch(r, skipPlace) {
     var s = exState;
     if (s.d && (r[3] < s.d[0] || r[3] > s.d[1])) return false;
+    if (s.y && (r[5] == null || r[5] < s.y[0] || r[5] > s.y[1])) return false;
     if (s.f && r[4] !== s.f) return false;
     if (s.a && r[2] !== s.a) return false;
     if (s.art && !EX.art[r[0]]) return false;
@@ -317,42 +320,172 @@
 
   /* 时间轴：每个朝代一格，宽度随篇数开方。按下拖到另一格，选一段；
      点已选的单格，取消。 */
-  function exBuildTime() {
-    var box = $("#exTime"); box.innerHTML = "";
-    var peak = Math.max.apply(null, EX.dyn.map(function (d) { return d.c; }));
-    var down = null;
-    EX.dyn.forEach(function (d, i) {
-      var seg = el("div", "ex-seg");
-      seg.style.flexGrow = (0.35 + Math.sqrt(d.c / peak)).toFixed(3);
-      seg.innerHTML = '<b>' + esc(T.dyn(d.k)) + '</b><i>' + esc(d.span) + '</i>';
-      seg.setAttribute("data-i", i);
-      seg.addEventListener("pointerdown", function (e) { down = i; e.preventDefault(); exSegHover(i, i); });
-      seg.addEventListener("pointerenter", function () { if (down != null) exSegHover(down, i); });
-      box.appendChild(seg);
-    });
-    function finish(i) {
-      if (down == null) return;
-      var lo = Math.min(down, i), hi = Math.max(down, i); down = null;
-      var a = EX.dyn[lo].o, b = EX.dyn[hi].o;
-      if (exState.d && exState.d[0] === a && exState.d[1] === b) exSet({ d: null });
-      else exSet({ d: [a, b] });
-    }
-    box.querySelectorAll(".ex-seg").forEach(function (seg) {
-      seg.addEventListener("pointerup", function () { finish(+seg.getAttribute("data-i")); });
-    });
-    document.addEventListener("pointerup", function () { if (down != null) { down = null; exPaintTime(); } });
+  /* ---------- 时间轴 ----------
+     一条年尺是主角，朝代格子贴在它上面，同一把尺。尺上拖一个几十年的窗，
+     列表就是窗里那些年的诗；点朝代格子则是整个朝代。朝代之间的空白
+     （秦汉、南北朝隋、明）库里没有诗，格子点了去维基百科，格子角上的 ↗
+     也是。有诗的地方点了筛，没诗的地方点了读。
+     尺不是均匀的：先秦一千年、唐三百年，按篇数开方分宽度，空白给一小段。
+     格子的像素位置排好之后量回来，年份和像素之间就是分段线性的对应。 */
+  var EX_SPAN = { xianqin: [-1100, -221], weijin: [220, 420], tang: [618, 907], wudai: [907, 960],
+                  song: [960, 1279], yuan: [1279, 1368], qing: [1644, 1912] };
+  var EX_WIKI = {
+    xianqin: ["先秦", "Zhou_dynasty"], weijin: ["魏晋", "Jin_dynasty_(266–420)"], tang: ["唐朝", "Tang_dynasty"],
+    wudai: ["五代十国", "Five_Dynasties_and_Ten_Kingdoms_period"], song: ["宋朝", "Song_dynasty"],
+    yuan: ["元朝", "Yuan_dynasty"], qing: ["清朝", "Qing_dynasty"],
+    qinhan: ["汉朝", "Han_dynasty"], nanbei: ["南北朝", "Northern_and_Southern_dynasties"], ming: ["明朝", "Ming_dynasty"]
+  };
+  var EX_GAP_NAME = { qinhan: { zh: "秦汉", en: "Qin · Han" }, nanbei: { zh: "南北朝 · 隋", en: "Southern & Northern · Sui" }, ming: { zh: "明", en: "Ming" } };
+  var exSegs = [], exWin = 50, exDrag = null;
+  function wikiUrl(key) {
+    var w = EX_WIKI[key]; if (!w) return "";
+    return T.isEn() ? "https://en.wikipedia.org/wiki/" + w[1] : "https://zh.wikipedia.org/wiki/" + encodeURIComponent(w[0]);
   }
-  function exSegHover(a, b) {
-    var lo = Math.min(a, b), hi = Math.max(a, b);
-    document.querySelectorAll("#exTime .ex-seg").forEach(function (seg, i) {
-      seg.classList.toggle("on", i >= lo && i <= hi);
+  function exBuildTime() {
+    var box = $("#exTime"); box.innerHTML = '<div class="ex-dyn" id="exDyn"></div>' +
+      '<canvas class="ex-ruler" id="exRuler"></canvas>' +
+      '<div class="ex-win"><span>' + esc(T("窗宽")) + '</span>' +
+        [10, 50, 100].map(function (w) { return '<button class="chip ex-w" data-w="' + w + '">' + w + '</button>'; }).join("") +
+      '</div>';
+    try { exWin = +localStorage.getItem("exWin") || 50; } catch (e) {}
+    var row = $("#exDyn"), peak = Math.max.apply(null, EX.dyn.map(function (d) { return d.c; }));
+    var gapNames = ["qinhan", "nanbei", "ming"], gi = 0, prev = null;
+    exSegs = [];
+    EX.dyn.forEach(function (d) {
+      var sp = EX_SPAN[d.slug]; if (!sp) return;
+      if (prev && sp[0] > prev[1] + 1) {
+        var g = gapNames[gi++] || "gap", seg = el("a", "ex-seg gap");
+        seg.href = wikiUrl(g) || "#"; seg.target = "_blank"; seg.rel = "noopener";
+        seg.style.flexGrow = "0.3";
+        var nm = EX_GAP_NAME[g] || { zh: "", en: "" };
+        seg.innerHTML = '<b>' + esc(T.isEn() ? nm.en : nm.zh) + ' ↗</b><i>' + esc(T.year(prev[1]) + " – " + T.year(sp[0])) + '</i>';
+        seg.title = T("库中无此时期作品，点开维基百科");
+        row.appendChild(seg);
+        exSegs.push({ el: seg, y0: prev[1], y1: sp[0], gap: true });
+      }
+      var s = el("div", "ex-seg");
+      s.style.flexGrow = (0.35 + Math.sqrt(d.c / peak)).toFixed(3);
+      s.innerHTML = '<b>' + esc(T.dyn(d.k)) + '</b><i>' + esc(d.span) + '</i>' +
+        '<a class="ex-wiki" href="' + esc(wikiUrl(d.slug)) + '" target="_blank" rel="noopener" title="' +
+          esc(T("维基百科")) + '">↗</a>';
+      s.addEventListener("click", function (e) {
+        if (e.target.closest(".ex-wiki")) return;
+        if (exState.d && exState.d[0] === d.o && exState.d[1] === d.o && !exState.y) exSet({ d: null });
+        else exSet({ d: [d.o, d.o], y: null });
+      });
+      row.appendChild(s);
+      exSegs.push({ el: s, y0: sp[0], y1: sp[1], o: d.o });
+      prev = sp;
     });
+    box.querySelectorAll(".ex-w").forEach(function (b) {
+      b.addEventListener("click", function () {
+        exWin = +b.getAttribute("data-w");
+        try { localStorage.setItem("exWin", exWin); } catch (e) {}
+        if (exState.y) { var mid = (exState.y[0] + exState.y[1]) / 2; exSet({ y: exWinAt(mid) }); }
+        else exPaintTime();
+      });
+    });
+    var ruler = $("#exRuler");
+    ruler.addEventListener("pointerdown", function (e) {
+      exDrag = true; ruler.setPointerCapture(e.pointerId); e.preventDefault();
+      exDragTo(e);
+    });
+    ruler.addEventListener("pointermove", function (e) { if (exDrag) exDragTo(e); });
+    function up(e) {
+      if (!exDrag) return; exDrag = null;
+      var y = exYearAt(e.clientX); if (y == null) return;
+      exSet({ y: exWinAt(y), d: null });
+    }
+    ruler.addEventListener("pointerup", up);
+    ruler.addEventListener("pointercancel", function () { exDrag = null; exPaintTime(); });
+    window.addEventListener("resize", exPaintTime);
+  }
+  function exWinAt(mid) {
+    var a = Math.round(mid - exWin / 2), b = a + exWin;
+    return [a, b];
+  }
+  function exDragTo(e) {
+    var y = exYearAt(e.clientX); if (y == null) return;
+    exDrawRuler(exWinAt(y));
+  }
+  // measure the boxes, then year <-> x is linear inside each box
+  function exScale() {
+    var box = $("#exRuler").getBoundingClientRect();
+    return exSegs.map(function (s) {
+      var r = s.el.getBoundingClientRect();
+      return { x0: r.left - box.left, x1: r.right - box.left, y0: s.y0, y1: s.y1, gap: s.gap, o: s.o };
+    });
+  }
+  function exXOf(y, sc) {
+    for (var i = 0; i < sc.length; i++) {
+      var s = sc[i];
+      if (y >= s.y0 && y <= s.y1) return s.x0 + (s.x1 - s.x0) * (y - s.y0) / (s.y1 - s.y0);
+    }
+    if (y < sc[0].y0) return sc[0].x0;
+    return sc[sc.length - 1].x1;
+  }
+  function exYearAt(clientX) {
+    var sc = exScale(), box = $("#exRuler").getBoundingClientRect(), x = clientX - box.left;
+    for (var i = 0; i < sc.length; i++) {
+      var s = sc[i];
+      if (x >= s.x0 && x <= s.x1) return Math.round(s.y0 + (s.y1 - s.y0) * (x - s.x0) / (s.x1 - s.x0));
+    }
+    if (x < sc[0].x0) return sc[0].y0;
+    return sc[sc.length - 1].y1;
+  }
+  function exDrawRuler(win) {
+    var cv = $("#exRuler"); if (!cv || !exSegs.length) return;
+    var W = cv.clientWidth, H = 46, dpr = window.devicePixelRatio || 1;
+    cv.width = W * dpr; cv.height = H * dpr;
+    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
+    var sc = exScale();
+    var css = getComputedStyle(document.documentElement);
+    var ink = css.getPropertyValue("--ink-soft").trim() || "#8a8375", red = css.getPropertyValue("--cinnabar").trim() || "#a8322d";
+    var line = css.getPropertyValue("--line").trim() || "#ddd";
+    // density per decade, only where the other filters let through
+    var bins = {}, peak = 1;
+    EX.poems.forEach(function (r) {
+      if (r[5] == null) return;
+      if (exState.f && r[4] !== exState.f) return;
+      if (exState.a && r[2] !== exState.a) return;
+      if (exState.art && !EX.art[r[0]]) return;
+      var b = Math.floor(r[5] / 10) * 10; bins[b] = (bins[b] || 0) + 1; if (bins[b] > peak) peak = bins[b];
+    });
+    c.fillStyle = ink; c.globalAlpha = 0.55;
+    Object.keys(bins).forEach(function (b) {
+      var x0 = exXOf(+b, sc), x1 = exXOf(+b + 10, sc), h = Math.max(1, 30 * Math.sqrt(bins[b] / peak));
+      c.fillRect(x0, 34 - h, Math.max(1, x1 - x0 - 0.5), h);
+    });
+    c.globalAlpha = 1;
+    // gaps hatched faintly, so the eye reads them as "nothing here"
+    sc.forEach(function (s) { if (s.gap) { c.fillStyle = line; c.fillRect(s.x0, 33, s.x1 - s.x0, 1); } });
+    c.fillStyle = line; c.fillRect(0, 34, W, 1);
+    // ticks every century inside the boxes
+    c.fillStyle = ink; c.font = "9px " + (css.getPropertyValue("--serif-en").trim() || "serif"); c.textAlign = "center";
+    sc.forEach(function (s) {
+      if (s.gap) return;
+      var step = (s.y1 - s.y0) > 400 ? 200 : 100;
+      for (var y = Math.ceil(s.y0 / step) * step; y <= s.y1; y += step) {
+        var x = exXOf(y, sc); c.fillRect(x, 34, 1, 4);
+        if ((s.x1 - s.x0) / ((s.y1 - s.y0) / step) > 34) c.fillText(T.year(y), x, 45);
+      }
+    });
+    // the window
+    if (win) {
+      var a = exXOf(win[0], sc), b = exXOf(win[1], sc);
+      c.fillStyle = red; c.globalAlpha = 0.16; c.fillRect(a, 0, Math.max(2, b - a), 34);
+      c.globalAlpha = 1; c.fillRect(a, 0, 1, 34); c.fillRect(Math.max(a + 1, b - 1), 0, 1, 34);
+    }
   }
   function exPaintTime() {
-    document.querySelectorAll("#exTime .ex-seg").forEach(function (seg, i) {
-      var o = EX.dyn[i].o;
-      seg.classList.toggle("on", !!exState.d && o >= exState.d[0] && o <= exState.d[1]);
+    exSegs.forEach(function (s) {
+      if (s.gap) return;
+      s.el.classList.toggle("on", !!exState.d && s.o >= exState.d[0] && s.o <= exState.d[1]);
     });
+    document.querySelectorAll("#exTime .ex-w").forEach(function (b) {
+      b.classList.toggle("active", +b.getAttribute("data-w") === exWin);
+    });
+    exDrawRuler(exState.y);
   }
 
   /* 筛子：体裁一排，诗人一个输入框（带候选），配画一枚，地点选了才出现。 */
@@ -408,7 +541,7 @@
     var pl = $("#exChips .ex-place"), p = exState.p != null && EX.places[exState.p];
     pl.hidden = !p;
     if (p) pl.textContent = p.n + " ×";
-    $("#exChips .ex-clear").hidden = !(exState.d || exState.f || exState.a || exState.p != null || exState.art);
+    $("#exChips .ex-clear").hidden = !(exState.d || exState.y || exState.f || exState.a || exState.p != null || exState.art);
   }
 
   /* 地图上的点是除地点外其余筛子筛过的，所以换地点不必先清掉地点。
