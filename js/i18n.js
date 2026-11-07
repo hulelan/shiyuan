@@ -37,6 +37,7 @@ window.T = (function () {
     "地图": "Map",
     "探索": "Explore",
     "配画": "With paintings",
+    "配图": "With images",
     "诗人…": "Poet…",
     "清除筛选": "Clear filters",
     "窗宽": "Window",

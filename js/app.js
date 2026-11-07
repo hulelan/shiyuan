@@ -274,7 +274,7 @@
     .then(function (res) {
       if (!ok()) return;
       EX = res[0]; authorPy = res[2] || {};
-      EX.art = {}; (res[1] || []).forEach(function (a) { EX.art[a.poem] = 1; });
+      EX.art = {}; (res[1] || []).forEach(function (a) { EX.art[a.poem] = a; });
       exBuild(host);
       exPaint();
     })["catch"](function (e) { if (ok()) failed(host, e); });
@@ -520,7 +520,7 @@
       if (!v) return exSet({ a: null });
       if (authors[v]) exSet({ a: v });
     });
-    var art = el("button", "chip ex-art", esc(T("配画")));
+    var art = el("button", "chip ex-art", esc(T("配图")));
     art.addEventListener("click", function () { exSet({ art: !exState.art }); });
     row2.appendChild(art);
     var place = el("button", "chip ex-place");
@@ -588,15 +588,17 @@
     exNowLine();
   }
   function exCard(r) {
-    var card = el("div", "card");
+    var card = el("div", "card" + (EX.art[r[0]] ? " with-img" : ""));
     card.setAttribute("data-d", r[3]); if (r[5] != null) card.setAttribute("data-y", r[5]);
     var yr = r[5] != null ? '<span class="yr">' + esc(T.year(r[5])) + '</span>' : "";
+    var pic = EX.art[r[0]];
     card.innerHTML =
+      (pic ? '<img class="card-img" src="assets/art/' + esc(pic.file) + '" alt="" loading="lazy">' : "") +
       '<span class="dyn">' + esc(exDynName(r[3])) + (r[4] ? ' · ' + esc(r[4]) : "") + yr + '</span>' +
       '<h3>' + esc(r[1]) + '</h3>' +
       '<span class="' + (r[2] && r[2] !== "佚名" ? "author author-link" : "author") + '">' + esc(authorName(r[2])) + '</span>' +
       (r[6] ? '<div class="excerpt">' + esc(r[6]) + '</div>' : "") +
-      (EX.art[r[0]] ? '<span class="has-art">' + esc(T("配画")) + '</span>' : "");
+      "";
     card.addEventListener("click", function () { go("/poem/" + r[0]); });
     var al = card.querySelector(".author-link");
     if (al) al.addEventListener("click", function (e) { e.stopPropagation(); exSet({ a: r[2] }); });

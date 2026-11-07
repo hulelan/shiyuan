@@ -875,7 +875,6 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
 }
 .ex-list .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 .card .yr { float: right; color: var(--gold); }
-.card .has-art { position: absolute; right: 10px; bottom: 9px; font-size: 10px; letter-spacing: 1px; color: var(--jade); }
 @media (max-width: 860px) {
   .ex-body { grid-template-columns: 1fr; }
   .ex-map { position: static; }
@@ -890,3 +889,16 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
 .pd-art .daily-art { padding: 0; }
 .pd-art .daily-art img { max-height: 62vh; }
 .pd-art figcaption { justify-content: center; }
+
+/* 配图的卡片：图在上，裁成一条 */
+.card.with-img { grid-row: span 2; }
+.card-img { display: block; width: calc(100% + 28px); margin: -13px -14px 10px; height: 150px; object-fit: cover; }
+/* 「配图」那一枚筛子：四周几颗小星，小小的，别抢版面 */
+.ex-art { position: relative; margin: 0 10px 0 6px; }
+.ex-art::before, .ex-art::after {
+  content: "\2726"; position: absolute; font-size: 11px; line-height: 1; color: var(--cinnabar); pointer-events: none;
+  text-shadow: 9px -7px 0 var(--gold);
+}
+.ex-art::before { left: -10px; top: -8px; }
+.ex-art::after { right: -10px; bottom: -8px; transform: rotate(180deg); }
+.ex-art.active::before, .ex-art.active::after { color: var(--gold); text-shadow: 7px -9px 0 var(--cinnabar); }
