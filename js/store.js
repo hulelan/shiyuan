@@ -55,6 +55,7 @@ window.Store = (function () {
     curated: function () { return get("curated.json"); },
     // 首页：[id, 权重] 一览，与作者名的拼音（英文界面用）
     home: function () { return get("home.json"); },
+    explore: function () { return get("explore.json"); },
     authorPy: function () { return get("agg/author_py.json")["catch"](function () { return {}; }); },
 
     /* 配画清单。刻意不走 data/site/ 的产物：它是手写的，

@@ -35,9 +35,11 @@ window.T = (function () {
     "字词": "Words",
     "时间轴": "Timeline",
     "地图": "Map",
-    /* 顶栏的下拉 */
-    "更多视角": "Perspectives",
+    "探索": "Explore",
     "配画": "With paintings",
+    "诗人…": "Poet…",
+    "清除筛选": "Clear filters",
+    "{n} 处": "{n} places",
 
     /* ---- 两种读法 ---- */
     "卡片": "Cards",

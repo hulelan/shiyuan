@@ -7,9 +7,9 @@
   <meta name="description" content="古诗古文在线库 — 原文、拼音、译文、注释、赏析、英译，并可按朝代、作者、体裁、主题、字词、时间与地理探索。">
   <!-- Leaflet 不进 <head>：按需加载（首次打开地图才注入，见 js/app.js 的 loadLeaflet()）。
        它原来是这里唯一的第三方渲染阻塞依赖，首页不为一张地图等 CDN。 -->
-  <link rel="stylesheet" href="css/shell.css?b=b428753">
-  <link rel="stylesheet" href="css/fonts.css?b=b428753">
-  <link rel="stylesheet" href="css/style.css?b=b428753">
+  <link rel="stylesheet" href="css/shell.css?b=e8d13b9">
+  <link rel="stylesheet" href="css/fonts.css?b=e8d13b9">
+  <link rel="stylesheet" href="css/style.css?b=e8d13b9">
 </head>
 <body>
   <!-- cross-site tab strip -->
@@ -24,16 +24,9 @@
     <div class="brand" role="button" tabindex="0">
       <h1>诗渊</h1>
     </div>
-    <!-- 顶栏只留首页；其余七种看法收进「更多视角」。
-         菜单项由 js/app.js 生成 —— 那里已经有一份视图清单，
-         再在这里抄一遍，早晚会跟它对不上。 -->
     <nav class="tabs" id="viewTabs">
       <button data-view="home" class="active">首页</button>
-      <div class="lens" id="lens">
-        <button class="lens-btn" id="lensBtn" aria-haspopup="true" aria-expanded="false"
-                aria-controls="lensMenu">更多视角<span class="lens-caret">▾</span></button>
-        <div class="lens-menu" id="lensMenu" role="menu" hidden></div>
-      </div>
+      <button data-view="explore">探索</button>
     </nav>
     <div class="searchbox">
       <input type="search" id="search" placeholder="搜索标题或作者…" autocomplete="off">
@@ -44,15 +37,7 @@
 
   <main id="main">
     <section class="view" id="view-home"></section>
-    <section class="view hidden" id="view-library"></section>
-    <section class="view hidden" id="view-authors"></section>
-    <section class="view hidden" id="view-author"></section>
-    <section class="view hidden" id="view-type"></section>
-    <section class="view hidden" id="view-theme"></section>
-    <section class="view hidden" id="view-word"></section>
-    <section class="view hidden" id="view-timeline"></section>
-    <section class="view hidden" id="view-map"></section>
-    <section class="view hidden" id="view-art"></section>
+    <section class="view hidden" id="view-explore"></section>
     <section class="view hidden" id="view-search"></section>
   </main>
 
@@ -85,8 +70,8 @@
     }
   })();
   </script>
-  <script src="js/i18n.js?b=b428753"></script>
-  <script src="js/store.js?b=b428753"></script>
-  <script src="js/app.js?b=b428753"></script>
+  <script src="js/i18n.js?b=e8d13b9"></script>
+  <script src="js/store.js?b=e8d13b9"></script>
+  <script src="js/app.js?b=e8d13b9"></script>
 </body>
 </html>

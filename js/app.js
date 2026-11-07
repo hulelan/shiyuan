@@ -76,160 +76,10 @@
     card.addEventListener("click", function () { go("/poem/" + c.id); });
     var al = card.querySelector(".author-link");
     if (al) al.addEventListener("click", function (e) {
-      e.stopPropagation(); go("/author/" + encodeURIComponent(c.a));
+      e.stopPropagation(); go("/explore?a=" + encodeURIComponent(c.a));
     });
     return card;
   }
-
-  /* ---------- 两种读法：卡片 / 长卷 ----------
-     卡片是查检用的 —— 一眼扫过去找那一首。
-     长卷是通读用的 —— 顺着一列列往下看，像展开一卷手卷。
-     任何一个列表都该能两种读法：某个朝代的、某位作者的、某个体裁的、某个主题的。
-     选择记在 localStorage 里：一个人怎么读书，不该每换一页就重选一次。 */
-  function readMode() {
-    try { return localStorage.getItem("readMode") === "scroll" ? "scroll" : "cards"; }
-    catch (e) { return "cards"; }
-  }
-  function setReadMode(m) {
-    try { localStorage.setItem("readMode", m); } catch (e) {}
-  }
-
-  var PAGE = 120;
-  /* 分页渲染：一次只塞 PAGE 张，其余按需追加。
-     more 是个返回 Promise<卡片数组> 的取数函数，没有下一批时返回 null。 */
-  function renderCards(host, cards, opts) {
-    opts = opts || {};
-    host.innerHTML = "";
-    var grid = el("div", "grid");
-    host.appendChild(grid);
-    var countEl = el("p", "count");
-    var shown = 0, list = cards.slice(), btn = null;
-
-    function draw() {
-      var end = Math.min(shown + PAGE, list.length);
-      for (var i = shown; i < end; i++) grid.appendChild(poemCard(list[i]));
-      shown = end;
-      if (btn) btn.remove();
-      var rest = opts.total ? opts.total - shown : list.length - shown;
-      if (rest > 0) {
-        btn = el("button", "more-btn", T("显示更多（还有 {n} 篇）", { n: rest }));
-        btn.addEventListener("click", function () {
-          if (shown < list.length) return draw();
-          btn.textContent = T("取书中…");
-          opts.more(list.length).then(function (next) {
-            if (!next || !next.length) { btn.remove(); btn = null; return; }
-            list = list.concat(next);
-            draw();
-          })["catch"](function () { btn.textContent = T("没取到，点此重试"); });
-        });
-        host.appendChild(btn);
-      }
-      countEl.textContent = T("共 {n} 篇", { n: opts.total || list.length });
-    }
-    draw();
-    host.appendChild(countEl);
-    if (!list.length) host.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
-  }
-
-  /* 列表的外壳：一条切换 + 内容区。
-     渲染器（卡片或长卷）从同一份 cards 出发，切换时不必重新取数。 */
-  function listBody(host, cards, opts) {
-    opts = opts || {};
-    host.innerHTML = '<div class="read-switch">' +
-        '<button class="rs" data-m="cards">' + T("卡片") + '</button>' +
-        '<button class="rs" data-m="scroll">' + T("长卷") + '</button>' +
-      '</div><div class="list-body"></div>';
-    var body = $(".list-body", host);
-
-    function paint() {
-      var m = readMode();
-      host.querySelectorAll(".rs").forEach(function (b) {
-        b.classList.toggle("on", b.getAttribute("data-m") === m);
-      });
-      if (m === "scroll") renderScroll(body, cards, opts);
-      else renderCards(body, cards, opts);
-    }
-    host.querySelectorAll(".rs").forEach(function (b) {
-      b.addEventListener("click", function () {
-        setReadMode(b.getAttribute("data-m"));
-        paint();
-      });
-    });
-    paint();
-  }
-
-  /* 长卷：竖排成列，自右向左展开。
-     卡片只带首句，通读要全文 —— 所以这里得按 id 去取正文。
-     一次取 SCROLL_BATCH 首：全文分片是 200 首一片，连着的几首多半同片，
-     Store 里又有缓存，实际请求数远小于首数。 */
-  var SCROLL_BATCH = 24;
-  function renderScroll(host, cards, opts) {
-    opts = opts || {};
-    host.innerHTML =
-      '<div class="scroll-stage"><div class="scroll-case"><div class="scroll">' +
-        '<div class="roller"></div>' +
-        '<div class="scroll-paper" id="scrollPaper"></div>' +
-        '<div class="roller"></div>' +
-      '</div></div>' +
-      '<div class="scroll-hint">' + T("自右向左展卷；点一列读全篇") + '</div></div>';
-    var paper = $("#scrollPaper", host);
-    var list = cards.slice(), at = 0, busy = false;
-
-    function column(p, card) {
-      var lines = (p.text || "").split("\n");
-      var prose = isProse(p);
-      var col = el("div", "scroll-col" + (prose ? " prose" : ""));
-      col.innerHTML = '<h3>' + esc(p.title) + '</h3>' +
-        '<div class="au">' + esc(T.dyn(p.dynasty)) + ' · ' + esc(p.author) + '</div>' +
-        lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("");
-      col.addEventListener("click", function () { go("/poem/" + p.id); });
-      return col;
-    }
-
-    function loadMore() {
-      if (busy) return Promise.resolve();
-      busy = true;
-      // 卡片不够了就再抓一片索引
-      var need = at + SCROLL_BATCH - list.length;
-      var pre = (need > 0 && opts.more)
-        ? opts.more(list.length).then(function (next) {
-            if (next && next.length) list = list.concat(next);
-          })["catch"](function () {})
-        : Promise.resolve();
-      return pre.then(function () {
-        var batch = list.slice(at, at + SCROLL_BATCH);
-        at += batch.length;
-        if (!batch.length) { busy = false; return; }
-        return Promise.all(batch.map(function (c) {
-          return Store.poem(c)["catch"](function () { return null; });
-        })).then(function (poems) {
-          poems.forEach(function (p, i) { if (p) paper.appendChild(column(p, batch[i])); });
-          busy = false;
-        });
-      })["catch"](function () { busy = false; });
-    }
-
-    // 卷是从右往左看的（direction: rtl），所以"接近末尾"是 scrollLeft 趋近于负的宽度
-    paper.addEventListener("scroll", function () {
-      var left = paper.scrollWidth - Math.abs(paper.scrollLeft) - paper.clientWidth;
-      if (left < 600) loadMore();
-    });
-
-    loading(paper);
-    loadMore().then(function () {
-      var l = $(".loading", paper);
-      if (l) l.remove();
-      if (!paper.children.length) {
-        paper.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
-      }
-    });
-  }
-
-  // ---------- 首页：一日一篇 ----------
-  /* 首页只有一首诗。留白是内容的一部分 ——
-     不要往这里加统计、入口、模式切换或推荐。
-     「长卷」现在是任何列表的第二种读法（见 renderScroll / listBody），
-     「配画」是一个独立视角（见 viewArt），都不该挤在首页。 */
 
   function poemLines(p) { return (p.text || "").split("\n"); }
   function isProse(p) {
@@ -333,354 +183,6 @@
       '</figcaption></figure>';
   }
 
-  // ---------- 诗文库 ----------
-  function viewLibrary(slug) {
-    var host = $("#view-library"), ok = guard();
-    var M = Store.manifest();
-    var dyns = M.dynasties;
-    var cur = slug && dyns.filter(function (d) { return d.slug === slug; })[0];
-
-    host.innerHTML = '<div class="filters" id="libFilters"></div><div id="libBody"></div>';
-    var f = $("#libFilters");
-    var all = el("button", "chip" + (cur ? "" : " active"), T("全部"));
-    all.addEventListener("click", function () { go("/library"); });
-    f.appendChild(all);
-    dyns.forEach(function (d) {
-      var b = el("button", "chip" + (cur && cur.slug === d.slug ? " active" : ""),
-        esc(T.dyn(d.k)) + ' <i>' + d.count + '</i>');
-      b.addEventListener("click", function () { go("/library/" + d.slug); });
-      f.appendChild(b);
-    });
-
-    var body = $("#libBody");
-    loading(body);
-    // 不选朝代时按朝代顺序逐片取，选了就只取那个朝代
-    var targets = cur ? [cur] : dyns.slice();
-    var at = { i: 0, k: 0 };
-    var total = targets.reduce(function (s, d) { return s + d.count; }, 0);
-
-    function nextShard() {
-      if (at.i >= targets.length) return Promise.resolve(null);
-      var d = targets[at.i];
-      if (at.k >= d.shards) { at.i++; at.k = 0; return nextShard(); }
-      var k = at.k++;
-      return Store.indexShard(d.slug, k);
-    }
-    nextShard().then(function (first) {
-      if (!ok()) return;
-      listBody(body, first || [], { total: total, more: function () { return nextShard(); } });
-    })["catch"](function (e) { if (ok()) failed(body, e); });
-  }
-
-  // ---------- 作者索引 ----------
-  var authorQuery = "", authorDyn = null;
-  function viewAuthors() {
-    var host = $("#view-authors"), ok = guard();
-    loading(host);
-    Store.authors().then(function (list) {
-      if (!ok()) return;
-      host.innerHTML =
-        '<div class="author-search"><input type="search" id="authorInput" placeholder="' +
-          T("搜索作者，如 李白、苏轼…") + '" autocomplete="off"></div>' +
-        '<div class="filters" id="authorFilters"></div>' +
-        '<div class="author-index" id="authorIndex"></div>' +
-        '<p class="count" id="authorsCount"></p>';
-      var input = $("#authorInput");
-      input.value = authorQuery;
-      input.addEventListener("input", function () { authorQuery = this.value; paint(); });
-
-      var box = $("#authorFilters");
-      var dyns = [];
-      list.forEach(function (a) { if (dyns.indexOf(a.dy) < 0) dyns.push(a.dy); });
-      var all = el("button", "chip" + (authorDyn ? "" : " active"), T("全部"));
-      all.addEventListener("click", function () { authorDyn = null; viewAuthors(); });
-      box.appendChild(all);
-      dyns.forEach(function (k) {
-        var b = el("button", "chip" + (authorDyn === k ? " active" : ""), esc(T.dyn(k)));
-        b.addEventListener("click", function () {
-          authorDyn = authorDyn === k ? null : k; viewAuthors();
-        });
-        box.appendChild(b);
-      });
-
-      function paint() {
-        var q = authorQuery.trim();
-        var rows = list.filter(function (a) {
-          return (!authorDyn || a.dy === authorDyn) && (!q || a.n.indexOf(q) !== -1);
-        });
-        var grid = $("#authorIndex");
-        grid.innerHTML = "";
-        rows.slice(0, 600).forEach(function (a) {
-          var c = el("div", "au-cell",
-            '<span class="au-seal">' + esc(a.n.slice(0, 1)) + '</span>' +
-            '<span class="au-name">' + esc(a.n) + '</span>' +
-            '<span class="au-dyn">' + esc(T.dyn(a.dy)) + '</span>' +
-            '<span class="au-n">' + a.c + '</span>');
-          c.addEventListener("click", function () { go("/author/" + encodeURIComponent(a.n)); });
-          grid.appendChild(c);
-        });
-        $("#authorsCount").textContent = T("共 {n} 位", { n: rows.length }) +
-          (rows.length > 600 ? T("（显示前 600，可搜索缩小范围）") : "");
-      }
-      paint();
-    })["catch"](function (e) { if (ok()) failed(host, e); });
-  }
-
-  // ---------- 作者专页 ----------
-  function viewAuthor(name) {
-    var host = $("#view-author"), ok = guard();
-    loading(host);
-    Store.authorWorks(name).then(function (works) {
-      if (!ok()) return;
-      if (!works.length) return failed(host, new Error(T("没有 {name} 的作品", { name: name })));
-      var dyns = [], forms = {}, themes = {};
-      works.forEach(function (w) {
-        var d = dyn(w.d);
-        if (dyns.indexOf(d) < 0) dyns.push(d);
-        forms[w.f] = (forms[w.f] || 0) + 1;
-        (w.th || []).forEach(function (t) { themes[t] = (themes[t] || 0) + 1; });
-      });
-      var topForms = Object.keys(forms).sort(function (a, b) { return forms[b] - forms[a]; }).slice(0, 4);
-      var topThemes = Object.keys(themes).sort(function (a, b) { return themes[b] - themes[a]; }).slice(0, 8);
-
-      host.innerHTML =
-        '<button class="back-link" id="authorBack">' + T("‹ 作者索引") + '</button>' +
-        '<div class="author-head">' +
-          '<div class="author-seal">' + esc(name.slice(0, 1)) + '</div>' +
-          '<h1 class="author-name">' + esc(name) + '</h1>' +
-          '<div class="author-meta">' +
-            '<span class="ap-dyn">' + esc(dyns.join(" · ")) + '</span>' +
-            ' ｜ ' + T("共收录 <b>{n}</b> 篇", { n: works.length }) +
-            (topForms.length ? ' ｜ ' + T("多作") + ' ' + topForms.map(function (f) {
-              return '<em>' + esc(f) + '</em>'; }).join("、") : "") +
-          '</div>' +
-        '</div>' +
-        (topThemes.length ? '<div class="ap-block"><h4>' + T("常写主题") + '</h4><div class="ap-chips">' +
-          topThemes.map(function (t) {
-            return '<button class="mini-chip" data-theme="' + esc(t) + '">' + esc(t) +
-              '<i>' + themes[t] + '</i></button>';
-          }).join("") + '</div></div>' : "") +
-        '<h4 class="ap-works-h">' + T("作品") + '</h4><div id="authorWorks"></div>';
-
-      listBody($("#authorWorks"), works, {});
-      $("#authorBack").addEventListener("click", function () { go("/authors"); });
-      host.querySelectorAll("[data-theme]").forEach(function (b) {
-        b.addEventListener("click", function () { goThemeByName(b.getAttribute("data-theme")); });
-      });
-    })["catch"](function (e) { if (ok()) failed(host, e); });
-  }
-
-  // ---------- 体裁 / 主题：同一套「先选键，再列作品」 ----------
-  function facetView(hostSel, load, keyOf, labelOf, groupOf, current, onPick) {
-    var host = $(hostSel), ok = guard();
-    loading(host);
-    load().then(function (metas) {
-      if (!ok()) return;
-      // 体裁与主题共用这段渲染，两个视图会同时存在于 DOM 里。
-      // 因此一律用 class + host 作用域查找：按 id 找会命中文档中靠前的那个视图。
-      host.innerHTML = '<div class="facet-nav"></div><div class="facet-body"></div>';
-      var nav = $(".facet-nav", host);
-      // 主题有近千个（模型自由生成，无受控词表），一次全铺出来没法看：
-      // 先只列常见的，其余折在"更多"后面。选中的那个无论排多后都要露出来。
-      var CAP = 40;
-      var expanded = false;
-      function paintNav() {
-        nav.innerHTML = "";
-        var shown = metas;
-        if (!expanded && metas.length > CAP) {
-          shown = metas.slice(0, CAP);
-          if (current && shown.indexOf(metas.filter(function (m) { return keyOf(m) === current; })[0]) < 0) {
-            shown = shown.concat(metas.filter(function (m) { return keyOf(m) === current; }));
-          }
-        }
-        var groups = {}, order = [];
-        shown.forEach(function (m) {
-          var g = groupOf(m);
-          if (!groups[g]) { groups[g] = []; order.push(g); }
-          groups[g].push(m);
-        });
-        order.forEach(function (g) {
-          var row = el("div", "facet-group");
-          if (g) row.appendChild(el("span", "facet-group-label", esc(g)));
-          groups[g].forEach(function (m) {
-            var b = el("button", "chip" + (current === keyOf(m) ? " active" : ""),
-              esc(labelOf(m)) + ' <i>' + m.c + '</i>');
-            b.addEventListener("click", function () { onPick(keyOf(m)); });
-            row.appendChild(b);
-          });
-          nav.appendChild(row);
-        });
-        if (metas.length > CAP) {
-          var t = el("button", "facet-toggle",
-            expanded ? T("收起") : T("更多主题（共 {n} 个）", { n: metas.length }));
-          t.addEventListener("click", function () { expanded = !expanded; paintNav(); });
-          nav.appendChild(t);
-        }
-      }
-      paintNav();
-      var body = $(".facet-body", host);
-      var meta = metas.filter(function (m) { return keyOf(m) === current; })[0];
-      if (!meta) {
-        body.innerHTML = '<p class="empty">' + T("选一项，看归入其下的作品。") + '</p>';
-        return;
-      }
-      loading(body);
-      var k = 0;
-      var fetchOne = function () { return meta._cards(k++); };
-      fetchOne().then(function (first) {
-        if (!ok()) return;
-        listBody(body, first || [], {
-          total: meta.c,
-          more: function () { return (k < (meta.s || 1)) ? fetchOne() : Promise.resolve(null); }
-        });
-      })["catch"](function (e) { if (ok()) failed(body, e); });
-    })["catch"](function (e) { if (ok()) failed(host, e); });
-  }
-
-  function viewType(key) {
-    facetView("#view-type",
-      function () {
-        return Store.forms().then(function (ms) {
-          ms.forEach(function (m) { m._cards = function (k) { return Store.formCards(m, k); }; });
-          return ms;
-        });
-      },
-      function (m) { return m.k; }, function (m) { return m.n; }, function (m) { return m.g; },
-      key, function (k) { go("/type/" + k); });
-  }
-
-  var themeMetaCache = null;
-  function viewTheme(key) {
-    facetView("#view-theme",
-      function () {
-        return Store.themes().then(function (ms) {
-          themeMetaCache = ms;
-          ms.forEach(function (m) { m._cards = function (k) { return Store.themeCards(m, k); }; });
-          return ms;
-        });
-      },
-      function (m) { return m.k; }, function (m) { return m.n; }, function () { return ""; },
-      key, function (k) { go("/theme/" + k); });
-  }
-  function goThemeByName(name) {
-    (themeMetaCache ? Promise.resolve(themeMetaCache) : Store.themes()).then(function (ms) {
-      themeMetaCache = ms;
-      var m = ms.filter(function (x) { return x.n === name; })[0];
-      if (m) go("/theme/" + m.k);
-    });
-  }
-
-  // ---------- 字词 ----------
-  function viewWord(term) {
-    var host = $("#view-word"), ok = guard();
-    loading(host);
-    Store.charSummary().then(function (sum) {
-      if (!ok()) return;
-      host.innerHTML =
-        '<div class="word-search"><input type="search" id="wordInput" placeholder="' +
-        T("输入一个字，如 月、风、江…") + '" autocomplete="off"></div>' +
-        '<div class="char-cloud" id="charCloud"></div><div id="wordResult"></div>';
-
-      var input = $("#wordInput");
-      input.value = term || "";
-      input.addEventListener("change", function () {
-        var v = (this.value.trim().match(/[一-鿿]/) || [""])[0];
-        if (v) go("/word/" + encodeURIComponent(v));
-      });
-
-      // 虚词与小数目不上云图：不、之、也 之类人人皆知，点进去也看不出什么。
-      var STOP = "不之有无也曰其一二三如我以为何而于是者可在与自此去得矣将相乃则所已未亦且或焉乎哉耶欤兮复皆更还又即若莫使令彼谁孰他汝尔吾余予及与同共每各凡既但只";
-      var cloud = $("#charCloud");
-      var shown = sum.cloud.filter(function (c) { return STOP.indexOf(c.c) < 0; }).slice(0, 80);
-      var max = shown[0].n, min = shown[shown.length - 1].n;
-      shown.forEach(function (c) {
-        var b = el("button", "cloud-char", esc(c.c));
-        b.style.fontSize = (13 + Math.round(20 * (c.n - min) / Math.max(1, max - min))) + "px";
-        b.title = T("{n} 篇", { n: c.n });
-        b.addEventListener("click", function () { go("/word/" + encodeURIComponent(c.c)); });
-        cloud.appendChild(b);
-      });
-
-      var out = $("#wordResult");
-      if (!term) {
-        out.innerHTML = '<p class="empty">' + T("点一个字，看它在诗篇中的身影。") + '</p>';
-        return;
-      }
-      loading(out);
-      Store.charHits(term).then(function (hit) {
-        if (!ok()) return;
-        if (!hit) {
-          out.innerHTML = '<p class="empty">' +
-            T('"{c}" 不在索引内——它在全库中出现得较少。', { c: esc(term) }) + '</p>';
-          return;
-        }
-        out.innerHTML = '<p class="word-count">' +
-          T('"<b>{c}</b>" 现身于 <b>{n}</b> 篇', { c: esc(term), n: hit.n }) +
-          (hit.shown < hit.n ? T("，以下列出其中 {n} 例（跨朝代抽样）", { n: hit.shown }) : "") + '</p>' +
-          '<div class="word-list" id="wordList"></div>';
-        var list = $("#wordList");
-        hit.h.forEach(function (h) {
-          var row = el("div", "word-row",
-            '<div class="wr-line">' + esc(h.l).split(esc(term)).join('<mark>' + esc(term) + '</mark>') + '</div>' +
-            '<div class="wr-meta">' + esc(dyn(h.d)) + '·' + esc(h.a) + '《' + esc(h.t) + '》</div>');
-          row.addEventListener("click", function () { go("/poem/" + h.id); });
-          list.appendChild(row);
-        });
-      })["catch"](function (e) { if (ok()) failed(out, e); });
-    })["catch"](function (e) { if (ok()) failed(host, e); });
-  }
-
-  // ---------- 时间轴 ----------
-  function viewTimeline(openBand) {
-    var host = $("#view-timeline"), ok = guard();
-    loading(host);
-    Store.timeline().then(function (bands) {
-      if (!ok()) return;
-      // 三种底子：逐篇断代、按作者生卒估算、只知朝代。
-      var anyAuthor = bands.some(function (b) { return b.byAuthorOnly; });
-      var anyLoose  = bands.some(function (b) { return !b.confident && !b.byAuthorOnly; });
-      host.innerHTML =
-        '<div class="tl-bands" id="tlBands"></div><div id="tlDrill"></div>';
-      var wrap = $("#tlBands");
-      var peak = 1;
-      bands.forEach(function (b) { b.hist.forEach(function (h) { peak = Math.max(peak, h.n); }); });
-
-      bands.forEach(function (b) {
-        var band = el("div", "tl-band" + (b.confident ? "" : b.byAuthorOnly ? " byauthor" : " vague"));
-        band.innerHTML =
-          '<div class="tl-band-head"><b>' + esc(T.dyn(b.k)) + '</b><em>' + esc(b.span) + '</em>' +
-          '<i>' + T("{n} 篇", { n: b.c }) + '</i></div>';
-        var bars = el("div", "tl-hist");
-        if ((b.confident || b.byAuthorOnly) && b.hist.length > 1) {
-          b.hist.forEach(function (h) {
-            var bar = el("button", "tl-bar");
-            bar.style.height = Math.max(3, Math.round(46 * h.n / peak)) + "px";
-            bar.title = T("{d} 年代 · {n} 篇", { d: T.year(h.d), n: h.n }) +
-              (b.byAuthorOnly ? " · " + T("按作者生卒估算") : "");
-            bar.addEventListener("click", function () { go("/library/" + b.slug); });
-            bars.appendChild(bar);
-          });
-        } else {
-          bars.appendChild(el("span", "tl-flat", T("尚未逐篇断代")));
-        }
-        band.appendChild(bars);
-        band.addEventListener("click", function (e) {
-          if (e.target.className !== "tl-bar") go("/library/" + b.slug);
-        });
-        wrap.appendChild(band);
-      });
-    })["catch"](function (e) { if (ok()) failed(host, e); });
-  }
-
-  // ---------- 地图 ----------
-  /* 两种看法并存：
-       全览 —— 不分时间，就是原来那张图，默认；
-       滑块 —— 五十年一档，看诗写在哪儿这件事怎么随时间挪动。
-     滑块只认断得出确年的篇目。按朝代摊出来的占位年份一概不进滑块 ——
-     否则一整个唐朝会齐刷刷堆在同一档上，看着像那五十年里人人写诗。
-     这些篇目在全览里照样在。 */
-  var BUCKET = 50;
-  var map = null, mapLayer = null, mapDone = false;
   var leafletPromise = null;
 
   /* Leaflet 按需加载：地图只是众多视角之一，首页不为它拖整份 CDN 资源
@@ -706,184 +208,285 @@
     return leafletPromise;
   }
 
-  function viewMap() {
-    var host = $("#view-map"), ok = guard();
-    if (mapDone) { setTimeout(function () { map && map.invalidateSize(); }, 60); return; }
-    host.innerHTML = '<div id="mapCanvas"></div>' +
-      '<div class="map-time" id="mapTime"></div>' +
-      '<p class="map-note" id="mapNote"></p>';
-    $("#mapNote").textContent = T("取书中…");
-    loadLeaflet()["catch"](function () { return null; }).then(function () {
+  /* ---------- 探索 ----------
+     诗文库、作者、体裁、时间轴、地图、配画，原先六页，现在一页。
+     上面一条时间轴，按朝代拖一段；左边地图，右边一列；体裁、诗人、
+     有画无画是几枚筛子。整张表（data/site/explore.json）取一次放在内存里，
+     换筛子只是重画，不再取数。地址里带着筛子（#/explore?d=6-8&f=七绝&a=李白），
+     所以一个筛好的列表可以直接分享。 */
+  var EX = null, exBuilt = false, exMap = null, exLayer = null, exRows = [], exShown = 0;
+  var exState = { d: null, f: null, a: null, p: null, art: false };
+  var EX_PAGE = 90;
+
+  function exParse(q) {
+    var s = { d: null, f: null, a: null, p: null, art: false };
+    (q || "").split("&").forEach(function (kv) {
+      var i = kv.indexOf("="); if (i < 0) return;
+      var k = kv.slice(0, i), v = decodeURIComponent(kv.slice(i + 1));
+      if (k === "d") { var m = /^(-?\d+)(?:-(-?\d+))?$/.exec(v); if (m) s.d = [+m[1], +(m[2] || m[1])]; }
+      else if (k === "f") s.f = v;
+      else if (k === "a") s.a = v;
+      else if (k === "p") s.p = +v;
+      else if (k === "art") s.art = v === "1";
+    });
+    return s;
+  }
+  function exQuery(s) {
+    var q = [];
+    if (s.d) q.push("d=" + (s.d[0] === s.d[1] ? s.d[0] : s.d[0] + "-" + s.d[1]));
+    if (s.f) q.push("f=" + encodeURIComponent(s.f));
+    if (s.a) q.push("a=" + encodeURIComponent(s.a));
+    if (s.p != null) q.push("p=" + s.p);
+    if (s.art) q.push("art=1");
+    return q.length ? "?" + q.join("&") : "";
+  }
+  function exSet(patch) {
+    var s = {}; Object.keys(exState).forEach(function (k) { s[k] = exState[k]; });
+    Object.keys(patch).forEach(function (k) { s[k] = patch[k]; });
+    go("/explore" + exQuery(s));
+  }
+  function exDynName(o) {
+    var d = EX.dyn.filter(function (x) { return x.o === o; })[0];
+    return d ? T.dyn(d.k) : "";
+  }
+  function exMatch(r, skipPlace) {
+    var s = exState;
+    if (s.d && (r[3] < s.d[0] || r[3] > s.d[1])) return false;
+    if (s.f && r[4] !== s.f) return false;
+    if (s.a && r[2] !== s.a) return false;
+    if (s.art && !EX.art[r[0]]) return false;
+    if (!skipPlace && s.p != null && r[7] !== s.p) return false;
+    return true;
+  }
+
+  function viewExplore(q) {
+    var host = $("#view-explore"), ok = guard();
+    exState = exParse(q);
+    if (EX && exBuilt) return exPaint();
+    if (!exBuilt) loading(host);
+    Promise.all([EX ? Promise.resolve(EX) : Store.explore(), Store.art(), Store.authorPy(),
+                 loadLeaflet()["catch"](function () { return null; })])
+    .then(function (res) {
       if (!ok()) return;
-      if (typeof L === "undefined") {
-        // 离线或 CDN 不可达：降级为提示，不拦着其余功能
-        $("#mapCanvas").innerHTML = '<div class="map-fallback">' +
-          T("地图组件需要联网加载（Leaflet / OpenStreetMap）。") + '<br>' +
-          T("连上网络后刷新页面即可查看诗文的地理分布。") + '<br>' +
-          T("其余功能均可离线使用。") + '</div>';
-        $("#mapNote").textContent = "";
-        return;
-      }
-      return Store.places();
-    }).then(function (places) {
-      if (!ok() || !places) return;
-      mapDone = true;
-      map = L.map("mapCanvas", { scrollWheelZoom: true }).setView([33.5, 112.5], 4);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        { maxZoom: 10, attribution: "© OpenStreetMap" }).addTo(map);
-      mapLayer = L.layerGroup().addTo(map);
-
-      // ---- 分档 ----
-      var dated = places.filter(function (p) { return p.y != null && !p.e; });
-      var undated = places.length - dated.length;
-      var slots = [], byslot = {}, peak = 1;
-      if (dated.length) {
-        var lo = Infinity, hi = -Infinity;
-        dated.forEach(function (p) {
-          var b = Math.floor(p.y / BUCKET) * BUCKET;
-          (byslot[b] = byslot[b] || []).push(p);
-          if (b < lo) lo = b;
-          if (b > hi) hi = b;
-        });
-        // 空档也留着位置 —— 时间轴要是等距的，中间那几百年的空白本身就是信息
-        for (var y = lo; y <= hi; y += BUCKET) {
-          slots.push(y);
-          peak = Math.max(peak, (byslot[y] || []).length);
-        }
-      }
-
-      function drawPins(list) {
-        mapLayer.clearLayers();
-        var spots = {};
-        list.forEach(function (p) {
-          var k = p.lat + "," + p.lng;
-          (spots[k] = spots[k] || { n: p.n, m: p.m, lat: p.lat, lng: p.lng, ps: [] }).ps.push(p);
-        });
-        Object.keys(spots).forEach(function (k) {
-          var s = spots[k];
-          var icon = L.divIcon({
-            className: "",
-            html: '<div class="map-pin">' + s.ps.length + '</div>',
-            iconSize: [26, 26], iconAnchor: [13, 13]
-          });
-          var html = '<div class="map-popup"><h4>' + esc(s.n) + '</h4>' +
-            '<div class="mp-meta">' + esc(s.m) + '</div><div style="margin-top:6px">' +
-            s.ps.slice(0, 30).map(function (p) {
-              return '<div><span class="mp-open" data-id="' + esc(p.id) + '">《' +
-                esc(p.t) + '》· ' + esc(p.a) + '</span></div>';
-            }).join("") + '</div></div>';
-          L.marker([s.lat, s.lng], { icon: icon }).addTo(mapLayer).bindPopup(html)
-            .on("popupopen", function () {
-              document.querySelectorAll(".mp-open").forEach(function (n) {
-                n.onclick = function () { go("/poem/" + n.getAttribute("data-id")); };
-              });
-            });
-        });
-      }
-
-      // ---- 滑块 ----
-      var timeBox = $("#mapTime");
-      if (!slots.length) { timeBox.remove(); drawPins(places); return; }
-
-      timeBox.innerHTML =
-        '<div class="mt-head">' +
-          '<button class="mt-all active" id="mtAll">' + T("全览") + '</button>' +
-          '<span class="mt-label" id="mtLabel"></span>' +
-        '</div>' +
-        '<div class="mt-hist" id="mtHist"></div>' +
-        '<input type="range" class="mt-range" id="mtRange" min="0" max="' +
-          (slots.length - 1) + '" value="0" step="1">' +
-        '<div class="mt-ends"><span>' + esc(T.year(slots[0])) + '</span>' +
-          '<span class="mt-hint">' + T("拖动滑块，每档五十年") + '</span>' +
-          '<span>' + esc(T.year(slots[slots.length - 1] + BUCKET - 1)) + '</span></div>';
-
-      var hist = $("#mtHist", host), range = $("#mtRange", host);
-      var label = $("#mtLabel", host), allBtn = $("#mtAll", host);
-      var bars = [];
-      slots.forEach(function (y, i) {
-        var c = (byslot[y] || []).length;
-        var bar = el("button", "mt-bar" + (c ? "" : " zero"));
-        bar.style.height = Math.max(2, Math.round(34 * c / peak)) + "px";
-        bar.title = T("{a} – {b} 年", { a: T.year(y), b: T.year(y + BUCKET - 1) }) +
-          " · " + (c ? T("此档 {n} 篇", { n: c }) : T("此档无诗"));
-        bar.addEventListener("click", function () { range.value = i; pick(i); });
-        hist.appendChild(bar);
-        bars.push(bar);
-      });
-
-      function markBar(i) {
-        bars.forEach(function (b, j) { b.classList.toggle("on", j === i); });
-      }
-      function pick(i) {
-        var y = slots[i], list = byslot[y] || [];
-        allBtn.classList.remove("active");
-        markBar(i);
-        label.innerHTML = '<b>' + esc(T("{a} – {b} 年",
-          { a: T.year(y), b: T.year(y + BUCKET - 1) })) + '</b> · ' +
-          (list.length ? T("此档 {n} 篇", { n: list.length }) : T("此档无诗"));
-        drawPins(list);
-      }
-      function showAll() {
-        allBtn.classList.add("active");
-        markBar(-1);
-        label.textContent = T("不分时间，{n} 篇", { n: places.length });
-        drawPins(places);
-      }
-      range.addEventListener("input", function () { pick(+this.value); });
-      allBtn.addEventListener("click", showAll);
-      showAll();
-
-      $("#mapNote").innerHTML =
-        T("共 {n} 篇有据可考。", { n: places.length });
+      EX = res[0]; authorPy = res[2] || {};
+      EX.art = {}; (res[1] || []).forEach(function (a) { EX.art[a.poem] = 1; });
+      exBuild(host);
+      exPaint();
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
-  /* ---------- 配画 ----------
-     不是又一种"切分诗的办法"（那是朝代、体裁、主题在做的事），
-     而是一处收拢：凡是配过画的，都在这儿。
-     配画永远只会是少数 —— 所以这一栏不该按"还差多少"来看，
-     它本身就是一个小小的画诗合集。 */
-  function viewArt() {
-    var host = $("#view-art"), ok = guard();
-    loading(host);
-    Promise.all([Store.art(), Store.curated()]).then(function (res) {
-      if (!ok()) return;
-      var art = res[0] || [];
-      if (!art.length) {
-        host.innerHTML = '<p class="empty">' + T("还没有配过画的作品。") + '</p>';
-        return;
-      }
-      host.innerHTML = '<p class="art-count"></p><div class="art-list" id="artList"></div>';
-      return Promise.all(art.map(function (a) {
-        return Store.poemById(a.poem)
-          .then(function (p) { return p ? { a: a, p: p } : null; })
-          ["catch"](function () { return null; });
-      })).then(function (rows) {
-        if (!ok()) return;
-        rows = rows.filter(Boolean);
-        $(".art-count", host).textContent = T("共 {n} 篇配了画", { n: rows.length });
-        var list = $("#artList", host);
-        rows.forEach(function (r) {
-          var p = r.p, lines = (p.text || "").split("\n");
-          var chars = (p.text || "").replace(/\s/g, "").length;
-          var vertical = !isProse(p) && chars <= 60;
-          var item = el("div", "art-item");
-          item.innerHTML = artFigure(r.a) +
-            '<div class="art-words">' +
-              '<div class="daily-text' + (vertical ? " vertical" : " prose") + '">' +
-              lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>' +
-              '<div class="daily-attr">' +
-              '<span class="attr-dyn">' + esc(T.dyn(p.dynasty)) + '</span>　' + esc(p.author) +
-              '　《' + esc(p.title) + '》</div>' +
-            '</div>';
-          item.addEventListener("click", function (e) {
-            if (e.target.closest("figcaption a")) return;   // 出处链接照常跳走
-            go("/poem/" + p.id);
-          });
-          list.appendChild(item);
-        });
+  /* 骨架搭一次：时间轴、筛子、地图、列表。换语言时拆了重搭。 */
+  function exBuild(host) {
+    if (exMap) { exMap.remove(); exMap = null; exLayer = null; }
+    host.innerHTML =
+      '<div class="ex-time" id="exTime"></div>' +
+      '<div class="ex-chips" id="exChips"></div>' +
+      '<div class="ex-body">' +
+        '<div class="ex-map"><div id="exMapCanvas"></div></div>' +
+        '<div class="ex-list">' +
+          '<div class="ex-now" id="exNow"></div>' +
+          '<div class="grid" id="exGrid"></div>' +
+          '<div id="exMore"></div>' +
+        '</div>' +
+      '</div>';
+    exBuildTime();
+    exBuildChips();
+    if (typeof L !== "undefined") {
+      exMap = L.map("exMapCanvas", { scrollWheelZoom: false, zoomControl: true }).setView([33.5, 112.5], 4);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        { maxZoom: 10, attribution: "© OpenStreetMap" }).addTo(exMap);
+      exLayer = L.layerGroup().addTo(exMap);
+      exMap.on("zoomend", exPaintMap);
+    } else {
+      $("#exMapCanvas").innerHTML = '<div class="map-fallback">' +
+        T("地图组件需要联网加载（Leaflet / OpenStreetMap）。") + '</div>';
+    }
+    // 拖动列表时，上面那行说你现在在哪个朝代、哪个年代
+    window.addEventListener("scroll", exNowLine, { passive: true });
+    // 列表到底了就再铺一批
+    var more = $("#exMore");
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) exDrawMore();
+      }, { rootMargin: "600px" }).observe(more);
+    }
+    exBuilt = true;
+  }
+
+  /* 时间轴：每个朝代一格，宽度随篇数开方。按下拖到另一格，选一段；
+     点已选的单格，取消。 */
+  function exBuildTime() {
+    var box = $("#exTime"); box.innerHTML = "";
+    var peak = Math.max.apply(null, EX.dyn.map(function (d) { return d.c; }));
+    var down = null;
+    EX.dyn.forEach(function (d, i) {
+      var seg = el("div", "ex-seg");
+      seg.style.flexGrow = (0.35 + Math.sqrt(d.c / peak)).toFixed(3);
+      seg.innerHTML = '<b>' + esc(T.dyn(d.k)) + '</b><i>' + esc(d.span) + '</i>';
+      seg.setAttribute("data-i", i);
+      seg.addEventListener("pointerdown", function (e) { down = i; e.preventDefault(); exSegHover(i, i); });
+      seg.addEventListener("pointerenter", function () { if (down != null) exSegHover(down, i); });
+      box.appendChild(seg);
+    });
+    function finish(i) {
+      if (down == null) return;
+      var lo = Math.min(down, i), hi = Math.max(down, i); down = null;
+      var a = EX.dyn[lo].o, b = EX.dyn[hi].o;
+      if (exState.d && exState.d[0] === a && exState.d[1] === b) exSet({ d: null });
+      else exSet({ d: [a, b] });
+    }
+    box.querySelectorAll(".ex-seg").forEach(function (seg) {
+      seg.addEventListener("pointerup", function () { finish(+seg.getAttribute("data-i")); });
+    });
+    document.addEventListener("pointerup", function () { if (down != null) { down = null; exPaintTime(); } });
+  }
+  function exSegHover(a, b) {
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    document.querySelectorAll("#exTime .ex-seg").forEach(function (seg, i) {
+      seg.classList.toggle("on", i >= lo && i <= hi);
+    });
+  }
+  function exPaintTime() {
+    document.querySelectorAll("#exTime .ex-seg").forEach(function (seg, i) {
+      var o = EX.dyn[i].o;
+      seg.classList.toggle("on", !!exState.d && o >= exState.d[0] && o <= exState.d[1]);
+    });
+  }
+
+  /* 筛子：体裁一排，诗人一个输入框（带候选），配画一枚，地点选了才出现。 */
+  function exBuildChips() {
+    var box = $("#exChips"); box.innerHTML = "";
+    var forms = {}; EX.poems.forEach(function (r) { if (r[4]) forms[r[4]] = (forms[r[4]] || 0) + 1; });
+    var fl = Object.keys(forms).sort(function (a, b) { return forms[b] - forms[a]; });
+    var row = el("div", "ex-forms");
+    var all = el("button", "chip", esc(T("全部")));
+    all.setAttribute("data-f", "");
+    all.addEventListener("click", function () { exSet({ f: null }); });
+    row.appendChild(all);
+    fl.forEach(function (f) {
+      var b = el("button", "chip", esc(f));
+      b.setAttribute("data-f", f);
+      b.addEventListener("click", function () { exSet({ f: exState.f === f ? null : f }); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+
+    var row2 = el("div", "ex-more");
+    var authors = {}; EX.poems.forEach(function (r) { if (r[2] && r[2] !== "佚名") authors[r[2]] = 1; });
+    var wrap = el("span", "ex-poet");
+    wrap.innerHTML = '<input list="exPoets" id="exPoet" placeholder="' + esc(T("诗人…")) + '" autocomplete="off">' +
+      '<datalist id="exPoets">' + Object.keys(authors).sort().map(function (a) {
+        return '<option value="' + esc(a) + '">' + (T.isEn() && authorPy[a] ? esc(authorPy[a]) : "") + '</option>';
+      }).join("") + '</datalist>';
+    row2.appendChild(wrap);
+    var poet = $("#exPoet", wrap);
+    poet.addEventListener("change", function () {
+      var v = this.value.trim();
+      if (!v) return exSet({ a: null });
+      if (authors[v]) exSet({ a: v });
+    });
+    var art = el("button", "chip ex-art", esc(T("配画")));
+    art.addEventListener("click", function () { exSet({ art: !exState.art }); });
+    row2.appendChild(art);
+    var place = el("button", "chip ex-place");
+    place.addEventListener("click", function () { exSet({ p: null }); });
+    row2.appendChild(place);
+    var clear = el("button", "chip ex-clear", "×");
+    clear.title = T("清除筛选");
+    clear.addEventListener("click", function () { go("/explore"); });
+    row2.appendChild(clear);
+    box.appendChild(row2);
+  }
+  function exPaintChips() {
+    document.querySelectorAll("#exChips .ex-forms .chip").forEach(function (b) {
+      b.classList.toggle("active", (b.getAttribute("data-f") || null) === exState.f);
+    });
+    var poet = $("#exPoet"); if (poet && document.activeElement !== poet) poet.value = exState.a || "";
+    $("#exChips .ex-art").classList.toggle("active", exState.art);
+    var pl = $("#exChips .ex-place"), p = exState.p != null && EX.places[exState.p];
+    pl.hidden = !p;
+    if (p) pl.textContent = p.n + " ×";
+    $("#exChips .ex-clear").hidden = !(exState.d || exState.f || exState.a || exState.p != null || exState.art);
+  }
+
+  /* 地图上的点是除地点外其余筛子筛过的，所以换地点不必先清掉地点。
+     拉远了一千多个地名叠成一团，于是按缩放级别并格：一格里只有一地就是
+     那一地，点它筛列表；一格里有好几地，点它放大过去。 */
+  function exCell() {
+    var z = exMap.getZoom();
+    return z >= 8 ? 0 : z >= 6 ? 0.5 : z >= 5 ? 1 : 2;
+  }
+  function exPaintMap() {
+    if (!exLayer) return;
+    exLayer.clearLayers();
+    var cell = exCell(), by = {};
+    EX.poems.forEach(function (r) {
+      if (r[7] < 0 || !exMatch(r, true)) return;
+      var p = EX.places[r[7]];
+      var k = cell ? Math.round(p.lat / cell) + "," + Math.round(p.lng / cell) : "p" + r[7];
+      var g = by[k] || (by[k] = { n: 0, lat: 0, lng: 0, places: {} });
+      g.n++; g.lat += p.lat; g.lng += p.lng; g.places[r[7]] = 1;
+    });
+    Object.keys(by).forEach(function (k) {
+      var g = by[k], ids = Object.keys(g.places), one = ids.length === 1 ? +ids[0] : null;
+      var on = one != null && exState.p === one;
+      var size = g.n > 60 ? 32 : g.n > 15 ? 27 : 22;
+      var icon = L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+        html: '<div class="map-pin' + (on ? " on" : "") + (one == null ? " many" : "") +
+          '" style="width:' + size + 'px;height:' + size + 'px">' + g.n + '</div>' });
+      var title = one != null ? EX.places[one].n + (EX.places[one].m ? "（" + EX.places[one].m + "）" : "")
+                              : T("{n} 处", { n: ids.length });
+      var at = [g.lat / g.n, g.lng / g.n];
+      L.marker(at, { icon: icon, title: title }).addTo(exLayer).on("click", function () {
+        if (one != null) exSet({ p: on ? null : one });
+        else exMap.setView(at, Math.min(exMap.getZoom() + 2, 10));
       });
-    })["catch"](function (e) { if (ok()) failed(host, e); });
+    });
+  }
+
+  function exPaint() {
+    exPaintTime(); exPaintChips(); exPaintMap();
+    exRows = EX.poems.filter(function (r) { return exMatch(r); });
+    var grid = $("#exGrid"); grid.innerHTML = ""; exShown = 0;
+    if (!exRows.length) grid.innerHTML = '<p class="empty">' + T("这里还没有作品。") + '</p>';
+    exDrawMore();
+    exNowLine();
+  }
+  function exCard(r) {
+    var card = el("div", "card");
+    card.setAttribute("data-d", r[3]); if (r[5] != null) card.setAttribute("data-y", r[5]);
+    var yr = r[5] != null ? '<span class="yr">' + esc(T.year(r[5])) + '</span>' : "";
+    card.innerHTML =
+      '<span class="dyn">' + esc(exDynName(r[3])) + (r[4] ? ' · ' + esc(r[4]) : "") + yr + '</span>' +
+      '<h3>' + esc(r[1]) + '</h3>' +
+      '<span class="' + (r[2] && r[2] !== "佚名" ? "author author-link" : "author") + '">' + esc(authorName(r[2])) + '</span>' +
+      (r[6] ? '<div class="excerpt">' + esc(r[6]) + '</div>' : "") +
+      (EX.art[r[0]] ? '<span class="has-art">' + esc(T("配画")) + '</span>' : "");
+    card.addEventListener("click", function () { go("/poem/" + r[0]); });
+    var al = card.querySelector(".author-link");
+    if (al) al.addEventListener("click", function (e) { e.stopPropagation(); exSet({ a: r[2] }); });
+    return card;
+  }
+  function exDrawMore() {
+    if (!exRows.length || exShown >= exRows.length) return;
+    var grid = $("#exGrid"), end = Math.min(exShown + EX_PAGE, exRows.length);
+    for (var i = exShown; i < end; i++) grid.appendChild(exCard(exRows[i]));
+    exShown = end;
+  }
+  /* 列表顶上那一行：第一张还露着的卡片属于哪个朝代、哪个十年。 */
+  function exNowLine() {
+    var now = $("#exNow"); if (!now || !EX) return;
+    var cards = $("#exGrid").children, top = now.getBoundingClientRect().bottom + 4;
+    var lo = 0, hi = cards.length - 1, hit = null;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1, r = cards[mid].getBoundingClientRect();
+      if (r.bottom < top) lo = mid + 1; else { hit = cards[mid]; hi = mid - 1; }
+    }
+    if (!hit || !hit.getAttribute) { now.textContent = ""; return; }
+    var o = +hit.getAttribute("data-d"), y = hit.getAttribute("data-y");
+    var dec = y != null ? Math.floor(+y / 10) * 10 : null;
+    var when = dec == null ? "" : T.isEn() ? (dec >= 0 ? dec + "s" : T.year(dec)) : T.year(dec) + " 年代";
+    now.textContent = exDynName(o) + (when ? "　" + when : "");
   }
 
   // ---------- 检索 ----------
@@ -1204,7 +807,7 @@
       });
       $("#closeDetail").addEventListener("click", closeDetail);
       var a = $("#pdAuthor");
-      if (a) a.addEventListener("click", function () { go("/author/" + encodeURIComponent(p.author)); });
+      if (a) a.addEventListener("click", function () { go("/explore?a=" + encodeURIComponent(p.author)); });
       if (hasPy) $("#pyToggle").addEventListener("click", function () {
         var hidden = $("#pdPoem").classList.toggle("no-pinyin");
         this.textContent = hidden ? T("显示拼音") : T("隐藏拼音");
@@ -1226,27 +829,12 @@
   }
 
   // ---------- 路由 ----------
-  var VIEWS = ["home", "library", "authors", "author", "type", "theme",
-               "word", "timeline", "map", "art", "search"];
+  var VIEWS = ["home", "explore", "search"];
   function show(v) {
     VIEWS.forEach(function (n) { $("#view-" + n).classList.toggle("hidden", n !== v); });
     document.querySelectorAll("#viewTabs > button[data-view]").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-view") === v);
     });
-    /* 顶栏已经看不见那七栏了，得让下拉按钮自己说清楚当前在哪：
-       在某个视角里，按钮就显示那个视角的名字。作者专页归到「作者」下。 */
-    var lens = v === "author" ? "authors" : v;
-    var hit = LENSES.filter(function (l) { return l.k === lens; })[0];
-    var box = $("#lens"), lb = $("#lensBtn");
-    if (box && lb) {
-      box.classList.toggle("active", !!hit);
-      lb.innerHTML = esc(hit ? T(hit.n) : T("更多视角")) +
-        '<span class="lens-caret">\u25be</span>';
-    }
-    $("#lensMenu") && $("#lensMenu").querySelectorAll(".lens-item").forEach(function (b) {
-      b.classList.toggle("on", b.getAttribute("data-view") === lens);
-    });
-    lensOpen(false);
   }
   function go(path, replace) {
     if (replace) location.replace("#" + path); else location.hash = path;
@@ -1254,7 +842,7 @@
 
   function route() {
     var raw = location.hash.replace(/^#/, "") || "/";
-    var parts = raw.split("/").filter(Boolean).map(decodeURIComponent);
+    var parts = raw.split("?")[0].split("/").filter(Boolean).map(decodeURIComponent);
     var head = parts[0] || "home";
 
     if (head === "poem") {
@@ -1269,57 +857,25 @@
     }
     window.scrollTo(0, 0);
 
+    // 旧地址各归其位：都是探索页上的某个筛法
+    var dynOf = function (slug) {
+      var d = (Store.manifest().dynasties || []).filter(function (x) { return x.slug === slug; })[0];
+      return d ? "?d=" + d.o : "";
+    };
     switch (head) {
-      case "library":  show("library");  return viewLibrary(parts[1]);
-      case "authors":  show("authors");  return viewAuthors();
-      case "author":   show("author");   return viewAuthor(parts[1]);
-      case "type":     show("type");     return viewType(parts[1]);
-      case "theme":    show("theme");    return viewTheme(parts[1]);
-      case "word":     show("word");     return viewWord(parts[1]);
-      case "timeline": show("timeline"); return viewTimeline();
-      case "map":      show("map");      return viewMap();
-      case "art":      show("art");      return viewArt();
+      case "explore":  show("explore");  return viewExplore((raw.split("?")[1] || ""));
+      case "library":  return go("/explore" + (parts[1] ? dynOf(parts[1].split("?")[0]) : ""), true);
+      case "author":   return go("/explore?a=" + encodeURIComponent(parts[1] || ""), true);
+      case "type":     return go("/explore" + (parts[1] ? "?f=" + encodeURIComponent(parts[1]) : ""), true);
+      case "art":      return go("/explore?art=1", true);
+      case "authors": case "theme": case "word": case "timeline": case "map":
+                       return go("/explore", true);
       case "search":   show("search");   return viewSearch(parts.slice(1).join("/"));
       default:         show("home");     return viewHome();
     }
   }
 
-  /* ---------- 更多视角 ----------
-     首页留在顶栏，其余八种看法收进一个下拉。一个词一项，不加说明。 */
-  var LENSES = [
-    { k: "library",  n: "诗文库" },
-    { k: "authors",  n: "作者" },
-    { k: "type",     n: "体裁" },
-    { k: "theme",    n: "主题" },
-    { k: "word",     n: "字词" },
-    { k: "timeline", n: "时间轴" },
-    { k: "map",      n: "地图" },
-    { k: "art",      n: "配画" }
-  ];
-  var TAB_LABEL = { home: "首页" };
-  LENSES.forEach(function (l) { TAB_LABEL[l.k] = l.n; });
-
-  function lensOpen(on) {
-    var box = $("#lens"), btn = $("#lensBtn"), menu = $("#lensMenu");
-    if (!box) return;
-    box.classList.toggle("open", on);
-    btn.setAttribute("aria-expanded", on ? "true" : "false");
-    menu.hidden = !on;
-  }
-  function buildLens() {
-    var menu = $("#lensMenu");
-    if (!menu) return;
-    menu.innerHTML = LENSES.map(function (l) {
-      return '<button class="lens-item" role="menuitem" data-view="' + l.k + '">' +
-        '<span class="li-n">' + esc(T(l.n)) + '</span></button>';
-    }).join("");
-    menu.querySelectorAll(".lens-item").forEach(function (b) {
-      b.addEventListener("click", function () {
-        lensOpen(false);
-        go("/" + b.getAttribute("data-view"));
-      });
-    });
-  }
+  var TAB_LABEL = { home: "首页", explore: "探索" };
 
   // ---------- 中 / EN ----------
   /* 只换界面。诗文、作者名、体裁名、主题词都不动 —— 那些是内容。
@@ -1329,9 +885,6 @@
       var k = b.getAttribute("data-view");
       if (TAB_LABEL[k]) b.textContent = T(TAB_LABEL[k]);
     });
-    var lb = $("#lensBtn");
-    if (lb) lb.innerHTML = esc(T("更多视角")) + '<span class="lens-caret">\u25be</span>';
-    buildLens();
     var box = $("#search");
     if (box) box.setAttribute("placeholder", T("搜索标题或作者…"));
     var foot = $(".site-footer");
@@ -1352,44 +905,10 @@
       });
     });
 
-    var lensBtn = $("#lensBtn");
-    if (lensBtn) {
-      lensBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        lensOpen(!$("#lens").classList.contains("open"));
-      });
-      // 点别处、按 Esc 都收起来
-      document.addEventListener("click", function (e) {
-        if (!$("#lens").contains(e.target)) lensOpen(false);
-      });
-      document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape") return;
-        if ($("#lens").classList.contains("open")) lensOpen(false);
-      });
-      // 键盘：下箭头展开并落到第一项
-      lensBtn.addEventListener("keydown", function (e) {
-        if (e.key !== "ArrowDown") return;
-        e.preventDefault();
-        lensOpen(true);
-        var first = $("#lensMenu .lens-item");
-        if (first) first.focus();
-      });
-      $("#lensMenu").addEventListener("keydown", function (e) {
-        var items = [].slice.call(this.querySelectorAll(".lens-item"));
-        var i = items.indexOf(document.activeElement);
-        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-          e.preventDefault();
-          var j = (i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
-          items[j].focus();
-        }
-      });
-    }
-
     var lt = $("#langToggle");
     if (lt) lt.addEventListener("click", function () {
       T.set(T.isEn() ? "zh" : "en");
-      mapDone = false;              // 地图是一次性搭起来的，换语言要重搭
-      themeMetaCache = null;
+      exBuilt = false;              // 探索页是一次性搭起来的，换语言要重搭
       applyChrome();
       route();
     });
