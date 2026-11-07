@@ -872,3 +872,9 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
   .ex-seg i { display: none; }
   .ex-seg b { font-size: 11.5px; letter-spacing: 0; }
 }
+
+/* 诗页里的画：排在正文之下，注释之上 */
+.pd-art { margin: 18px auto 6px; max-width: 560px; }
+.pd-art .daily-art { padding: 0; }
+.pd-art .daily-art img { max-height: 62vh; }
+.pd-art figcaption { justify-content: center; }

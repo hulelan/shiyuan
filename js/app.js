@@ -114,11 +114,13 @@
     Promise.all([homePool ? Promise.resolve(homePool) : Store.home(), Store.art(), Store.authorPy()])
     .then(function (res) {
       if (!ok()) return;
-      homePool = res[0]; var art = res[1] || []; authorPy = res[2] || {};
-      if (!homePool.length) return failed(host, new Error("首页候选为空"));
-      if (homeAt < 0) { homeHist.push(drawHome(homePool)); homeAt = 0; }
+      var art = res[1] || []; authorPy = res[2] || {};
       var artMap = {};
       art.forEach(function (a) { artMap[a.poem] = a; });
+      // 配了画的那几篇抽中的机会放大六倍：画是特意配的，不该一年才碰上一回
+      homePool = res[0].map(function (r) { return artMap[r[0]] ? [r[0], r[1] * 6] : r; });
+      if (!homePool.length) return failed(host, new Error("首页候选为空"));
+      if (homeAt < 0) { homeHist.push(drawHome(homePool)); homeAt = 0; }
       return Store.poemById(homeHist[homeAt]).then(function (p) {
         if (!ok()) return;
         if (!p) return failed(host, new Error("找不到 " + homeHist[homeAt]));
@@ -729,8 +731,10 @@
     d.innerHTML = '<button class="close-btn" id="closeDetail">×</button><p class="loading">取书中…</p>';
     $("#closeDetail").addEventListener("click", closeDetail);
 
-    Store.poemById(id).then(function (p) {
+    Promise.all([Store.poemById(id), Store.art()]).then(function (res) {
+      var p = res[0];
       if (!p) throw new Error(T("未找到 {id}", { id: id }));
+      var pic = (res[1] || []).filter(function (a) { return a.poem === p.id; })[0];
       var lines = (p.text || "").split("\n");
       var pys = p.pinyin ? p.pinyin.split("\n") : [];
       var hasPy = pys.length === lines.length;
@@ -789,6 +793,7 @@
         '</div>' +
         (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' +
           T(prosePoem ? "显示拼音" : "隐藏拼音") + '</button>' : "") +
+        (pic ? '<div class="pd-art">' + artFigure(pic) + '</div>' : "") +
         (p.enrichedBy ? '<div class="ai-note">' +
           T("✦ 译文 / 注释 / 赏析 / 英译 由 AI（{by}）生成，待校订", { by: esc(p.enrichedBy) }) +
           '</div>' : "") +
