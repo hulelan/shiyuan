@@ -27,7 +27,6 @@ window.T = (function () {
   var EN = {
     /* ---- 页眉 / 导航 ---- */
     "古诗古文 · 溯源": "Classical Chinese Poetry",
-    "收录 {n} 篇": "{n} works",
     "首页": "Home",
     "诗文库": "Library",
     "作者": "Poets",
@@ -63,6 +62,7 @@ window.T = (function () {
 
     /* ---- 首页 ---- */
     "释　文": "Read",
+    "上一篇": "Back",
     "换一篇": "Another",
 
     /* ---- 作者 ---- */

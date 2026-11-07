@@ -230,7 +230,6 @@
      不要往这里加统计、入口、模式切换或推荐。
      「长卷」现在是任何列表的第二种读法（见 renderScroll / listBody），
      「配画」是一个独立视角（见 viewArt），都不该挤在首页。 */
-  var homeOffset = 0;
 
   function poemLines(p) { return (p.text || "").split("\n"); }
   function isProse(p) {
@@ -242,57 +241,80 @@
       lines.some(function (l) { return l.length > 22; });
   }
 
+  /* ---------- 首页 ----------
+     每次打开随机抽一篇，按名气加权（data/site/home.json，tools/build_home.py）。
+     抽过的记在 homeHist 里：右边的竖条换下一篇，左边的回上一篇，
+     回到头了左边就不出现。刷新页面重抽。 */
+  var homeHist = [], homeAt = -1, homePool = null, authorPy = {};
+  function drawHome(pool) {
+    var total = 0, i;
+    for (i = 0; i < pool.length; i++) total += pool[i][1];
+    var r = Math.random() * total;
+    for (i = 0; i < pool.length; i++) { r -= pool[i][1]; if (r <= 0) break; }
+    var id = pool[Math.min(i, pool.length - 1)][0];
+    if (homeHist.indexOf(id) >= 0 && pool.length > homeHist.length) return drawHome(pool);
+    return id;
+  }
+  function authorName(name) {
+    return (T.isEn() && authorPy[name]) ? authorPy[name] : name;
+  }
   function viewHome() {
     var host = $("#view-home"), ok = guard();
     loading(host);
-    Promise.all([Store.curated(), Store.art()]).then(function (res) {
+    Promise.all([homePool ? Promise.resolve(homePool) : Store.home(), Store.art(), Store.authorPy()])
+    .then(function (res) {
       if (!ok()) return;
-      var pool = res[0], art = res[1] || [];
-      if (!pool.length) return failed(host, new Error("精编集为空"));
+      homePool = res[0]; var art = res[1] || []; authorPy = res[2] || {};
+      if (!homePool.length) return failed(host, new Error("首页候选为空"));
+      if (homeAt < 0) { homeHist.push(drawHome(homePool)); homeAt = 0; }
       var artMap = {};
       art.forEach(function (a) { artMap[a.poem] = a; });
+      return Store.poemById(homeHist[homeAt]).then(function (p) {
+        if (!ok()) return;
+        if (!p) return failed(host, new Error("找不到 " + homeHist[homeAt]));
+        var pic = artMap[p.id];
+        var lines = poemLines(p);
+        var prose = isProse(p);
+        var chars = (p.text || "").replace(/\s/g, "").length;
+        // 竖排只用在短篇上：长调竖排会溢出，横排反而稳当
+        var vertical = !prose && chars <= 60;
 
-      var day = Math.floor(Date.now() / 86400000);
-      var p = pool[(day + homeOffset) % pool.length];
-      var pic = artMap[p.id];
+        var verse = '<div class="daily-text' + (prose ? " prose" : "") +
+          (vertical ? " vertical" : "") + '" id="dailyText">' +
+          lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
+        var attr = '<div class="daily-attr">' +
+          '<span class="attr-dyn">' + esc(T.dyn(p.dynasty)) + '</span>　' + esc(authorName(p.author)) +
+          '　《' + esc(p.title) + '》</div>';
+        var stage = '<div class="daily-stage">' +
+          '<button class="daily-side prev' + (homeAt > 0 ? "" : " none") + '" id="dailyPrev" aria-label="' +
+            T("上一篇") + '" title="' + T("上一篇") + '"><span>‹</span></button>' +
+          '<div class="daily-main" id="dailyMain" role="link" tabindex="0" title="' + T("释　文") + '">' +
+            verse + attr + '</div>' +
+          '<button class="daily-side next" id="dailyNext" aria-label="' + T("换一篇") + '" title="' +
+            T("换一篇") + '"><span>›</span></button>' +
+          '</div>';
 
-      var lines = poemLines(p);
-      var prose = isProse(p);
-      var chars = (p.text || "").replace(/\s/g, "").length;
-      // 竖排只用在短篇上：长调竖排会溢出，横排反而稳当
-      var vertical = !prose && chars <= 60;
+        host.className = "view";
+        if (pic) {
+          host.innerHTML = '<div class="daily paired">' + artFigure(pic) +
+            '<div class="daily-words">' + stage + '</div></div>';
+        } else {
+          host.innerHTML = '<div class="daily">' + stage + '</div>';
+        }
 
-      var verse = '<div class="daily-text' + (prose ? " prose" : "") +
-        (vertical ? " vertical" : "") + '" id="dailyText">' +
-        lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
-      var attr = '<div class="daily-attr">' +
-        '<span class="attr-dyn">' + esc(T.dyn(p.dynasty)) + '</span>　' + esc(p.author) +
-        '　《' + esc(p.title) + '》</div>';
-      var acts = '<div class="daily-acts">' +
-        '<button class="quiet" id="dailyOpen">' + T("释　文") + '</button>' +
-        '<span class="daily-sep">·</span>' +
-        '<button class="quiet" id="dailyNext">' + T("换一篇") + '</button>' +
-        (pic ? "" : '<span class="daily-sep">·</span>' +
-          '<a class="quiet suggest-art" href="' + esc(artIssueUrl(p)) +
-          '" target="_blank" rel="noopener" title="' +
-          T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">' +
-          T("推荐一幅画") + '</a>') +
-        '</div>';
-
-      host.className = "view";
-      if (pic) {
-        host.innerHTML = '<div class="daily paired">' + artFigure(pic) +
-          '<div class="daily-words"><div class="daily-seal">詩淵</div>' +
-          verse + attr + acts + '</div></div>';
-      } else {
-        host.innerHTML = '<div class="daily"><div class="daily-seal">詩淵</div>' +
-          verse + attr + acts + '</div>';
-      }
-
-      function open() { go("/poem/" + p.id); }
-      $("#dailyText").addEventListener("click", open);
-      $("#dailyOpen").addEventListener("click", open);
-      $("#dailyNext").addEventListener("click", function () { homeOffset++; viewHome(); });
+        function open() { go("/poem/" + p.id); }
+        var main = $("#dailyMain");
+        main.addEventListener("click", open);
+        main.addEventListener("keydown", function (e) { if (e.key === "Enter") open(); });
+        $("#dailyNext").addEventListener("click", function () {
+          homeHist = homeHist.slice(0, homeAt + 1);
+          homeHist.push(drawHome(homePool)); homeAt++;
+          viewHome();
+        });
+        $("#dailyPrev").addEventListener("click", function () {
+          if (homeAt > 0) { homeAt--; viewHome(); }
+        });
+      });
     })["catch"](function (e) { if (ok()) failed(host, e); });
   }
 
@@ -1149,8 +1171,8 @@
         '<div class="pd-head"><h2>' + esc(p.title) + '</h2>' +
           '<div class="pd-meta">' +
             (p.author && p.author !== "佚名"
-              ? '<span class="pd-author-link" id="pdAuthor">' + esc(p.author) + '</span>'
-              : esc(p.author)) +
+              ? '<span class="pd-author-link" id="pdAuthor">' + esc(authorName(p.author)) + '</span>'
+              : esc(authorName(p.author))) +
             '<span class="seal">' + esc(T.dyn(p.dynasty)) + '</span>' +
             (p.form ? '<span class="seal jade">' + esc(p.form) + '</span>' : "") +
           '</div>' +
@@ -1314,9 +1336,6 @@
     if (box) box.setAttribute("placeholder", T("搜索标题或作者…"));
     var foot = $(".site-footer");
     if (foot) foot.textContent = T("文本仅供学习研究之用");
-    var stat = $("#bootStat"), m = Store.manifest();
-    if (stat) stat.textContent = m ? T("收录 {n} 篇", { n: m.total })
-                                   : T("古诗古文 · 溯源");
     var lt = $("#langToggle");
     if (lt) {
       lt.textContent = T.isEn() ? "中文" : "EN";

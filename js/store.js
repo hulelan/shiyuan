@@ -52,8 +52,10 @@ window.Store = (function () {
     dynastyName: function (o) { return nameOf[o] || ""; },
     dynastySlug: function (o) { return slugOf[o] || ""; },
 
-    // 首页只读这一个文件
     curated: function () { return get("curated.json"); },
+    // 首页：[id, 权重] 一览，与作者名的拼音（英文界面用）
+    home: function () { return get("home.json"); },
+    authorPy: function () { return get("agg/author_py.json")["catch"](function () { return {}; }); },
 
     /* 配画清单。刻意不走 data/site/ 的产物：它是手写的，
        加一幅画只需添一行 + 放一张图，不必重跑构建。没有这个文件也不算错。 */

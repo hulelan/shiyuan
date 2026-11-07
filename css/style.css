@@ -194,7 +194,6 @@ body {
   font-weight: 700;
   text-shadow: 0 1px 0 var(--sheen);
 }
-.brand-sub { color: var(--ink-soft); letter-spacing: var(--track-nav); font-size: 11px; }
 
 .tabs { display: flex; gap: 2px; margin-left: auto; }
 .tabs button {
@@ -368,7 +367,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
    界面用 --ui（拉丁在前），正文用 --serif-poem（汉字在前）。
    这两副的分工，是这个站看着对不对的根子。 */
 .pd-poem, .pd-head h2, .poem-card .zh,
-.daily-text, .daily-seal, .scroll-col, .card h3,
+.daily-text, .scroll-col, .card h3,
 .au-name, .author-name, .brand h1, .nr-t, .wr-line, .cloud-char {
   font-family: var(--serif-poem);
 }
@@ -429,7 +428,6 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 @media (max-width: 640px) {
   .site-header { gap: 10px; padding: 8px 14px; }
   .brand h1 { font-size: 18px; letter-spacing: 4px; }
-  .brand-sub { display: none; }
   .tabs button { padding: 4px 8px; font-size: 12px; letter-spacing: var(--track-label); }
   .poem-detail { padding: 24px 18px 28px; }
   .pd-line .zh { font-size: 17px; letter-spacing: 2px; }
@@ -462,33 +460,45 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 40px 20px 60px;
 }
-.daily-seal {
-  writing-mode: vertical-rl; font-size: 12px; letter-spacing: 6px;
-  color: var(--cinnabar); border: 1px solid var(--cinnabar);
-  padding: 10px 5px; line-height: 1.2; opacity: .8; margin-bottom: 38px;
-  border-radius: 0;
+/* 诗在中间一个框里，左右各一条竖长的框：右边换下一篇，左边回上一篇。
+   平时三个框都是透明的；鼠标一到这一片，框线全都现出来，指到哪一条，
+   那一条的 ‹ › 才亮。没有阴影，没有凸起。 */
+.daily-stage { display: flex; align-items: stretch; justify-content: center; gap: 14px; max-width: 100%; }
+.daily-main {
+  cursor: pointer; padding: 28px 32px 24px; border: 1px solid transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: border-color .2s; min-width: 0;
 }
-.daily-text { cursor: pointer; margin: 0 0 32px; }
+.daily-side {
+  flex: 0 0 44px; background: none; border: 1px solid transparent; cursor: pointer;
+  color: var(--ink-soft); font-family: var(--serif-en); font-size: 26px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .2s, color .2s;
+}
+.daily-side span { opacity: 0; transition: opacity .2s; }
+.daily-side.none { visibility: hidden; }
+.daily-stage:hover .daily-main, .daily-stage:hover .daily-side { border-color: var(--line); }
+.daily-main:hover { border-color: var(--cinnabar-soft); }
+.daily-side:hover { border-color: var(--cinnabar-soft); color: var(--cinnabar); }
+.daily-side:hover span { opacity: 1; }
+.daily-text { margin: 0; }
 .daily-text p {
   margin: 0; font-size: 21px; letter-spacing: 5px; line-height: 2.5;
   color: var(--ink); transition: color .25s;
 }
-.daily-text:hover p { color: var(--cinnabar); }
 /* 散文/长句：左对齐、正常字距、可折行 */
 .daily-text.prose { text-align: left; max-width: 620px; }
 .daily-text.prose p { font-size: 16px; letter-spacing: 1.5px; line-height: 2.2; margin-bottom: 12px; }
 /* 短篇竖排：手卷式 */
 .daily-text.vertical {
   writing-mode: vertical-rl; text-orientation: upright;
-  max-height: 58vh; margin: 0 auto 24px;
+  max-height: 58vh; margin: 0 auto;
 }
 .daily-text.vertical p {
   font-size: 22px; letter-spacing: 6px; line-height: 2.2; margin: 0;
 }
 
-.daily-attr { margin-top: 34px; color: var(--gold); font-size: 12px; letter-spacing: 3px; }
-.daily-acts { margin-top: 28px; display: flex; align-items: center; gap: 18px; }
-.daily-sep { color: var(--gold); font-size: 10px; opacity: .6; }
+.daily-attr { margin-top: 30px; color: var(--gold); font-size: 12px; letter-spacing: 3px; }
 .quiet {
   font-family: var(--serif); background: none; border: none; cursor: pointer;
   font-size: 12px; letter-spacing: var(--track-title); color: var(--ink-soft);
@@ -622,7 +632,6 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 
 @media (max-width: 640px) {
   .daily { min-height: calc(100vh - 200px); padding: 24px 12px 40px; }
-  .daily-seal { margin-bottom: 28px; }
   .daily-text p { font-size: 18px; letter-spacing: 3px; line-height: 2.3; }
   .daily-text.prose p { font-size: 15px; }
   /* 窄屏竖排会把诗挤成很高一条，改回横排 */
@@ -785,12 +794,11 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; min-width: 0;
 }
-.daily.paired .daily-seal { margin-bottom: 26px; }
 
 /* 竖排：右起成列，是这类招贴最认得出的样子。只用在短篇上。 */
 .daily-text.vertical {
   writing-mode: vertical-rl; text-orientation: upright;
-  max-height: 60vh; margin: 0 auto 24px;
+  max-height: 60vh; margin: 0 auto;
 }
 .daily-text.vertical p {
   font-size: 19px; letter-spacing: 5px; line-height: 2.1; margin: 0;
@@ -802,7 +810,6 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   .daily-art { padding-right: 0; }
   .daily-art img { max-height: 46vh; }
   .daily-words { border-left: none; border-top: 1px solid var(--line); padding: 26px 0 0; margin-top: 22px; }
-  .daily.paired .daily-seal { margin-bottom: 18px; }
   /* 窄屏竖排会把诗挤成很高一条，改回横排 */
   .daily-text.vertical { writing-mode: horizontal-tb; max-height: none; }
   .daily-text.vertical p { font-size: 17px; letter-spacing: 3px; line-height: 2.3; }
