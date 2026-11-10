@@ -133,7 +133,10 @@
 
         var verse = '<div class="daily-text' + (prose ? " prose" : "") +
           (vertical ? " vertical" : "") + '" id="dailyText">' +
-          lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join("") + '</div>';
+          lines.map(function (l) {
+            // 窄屏上长句得折，折在逗号句号后面，别折在词中间（配合 .daily-text 的 keep-all）
+            return '<p>' + esc(l).replace(/([，。、；：？！])/g, "$1<wbr>") + '</p>';
+          }).join("") + '</div>';
         var attr = '<div class="daily-attr">' +
           '<span class="attr-dyn">' + esc(T.dyn(p.dynasty)) + '</span>　' + esc(authorName(p.author)) +
           '　《' + esc(p.title) + '》</div>';
@@ -358,7 +361,7 @@
         seg.href = wikiUrl(g) || "#"; seg.target = "_blank"; seg.rel = "noopener";
         seg.style.flexGrow = "0.3";
         var nm = EX_GAP_NAME[g] || { zh: "", en: "" };
-        seg.innerHTML = '<b>' + esc(T.isEn() ? nm.en : nm.zh) + ' ↗</b><i>' + esc(T.year(prev[1]) + " – " + T.year(sp[0])) + '</i>';
+        seg.innerHTML = '<b><span class="ex-gname">' + esc(T.isEn() ? nm.en : nm.zh) + '</span> ↗</b><i>' + esc(T.year(prev[1]) + " – " + T.year(sp[0])) + '</i>';
         seg.title = T("库中无此时期作品，点开维基百科");
         row.appendChild(seg);
         exSegs.push({ el: seg, y0: prev[1], y1: sp[0], gap: true });
