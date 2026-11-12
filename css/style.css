@@ -67,6 +67,67 @@
   --track-title: 3px;    /* 栏目标题、印章 */
 }
 
+/* 「夜读」：同一张色板的暗面。跟系统走；页眉的 ☾ 可以压过系统，记在 localStorage.theme。
+   两段一模一样，是为了显式选暗时不受系统影响，显式选亮时也能压过暗系统。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink:      #e9e1cf;
+    --ink-soft: #a89f8b;
+    --paper:    #171510;
+    --paper-2:  #1e1b14;
+    --paper-hi: #221f18;
+    --paper-lo: #131109;
+    --cinnabar: #d97a4e;
+    --cinnabar-soft: #b9633c;
+    --jade:     #8caa8c;
+    --gold:     #c9a65c;
+    --line:     #3a3426;
+    --seal-ink:  #fdf6e8;
+    --sheen:     rgba(255, 255, 255, 0.04);
+    --scrim:     rgba(0, 0, 0, 0.66);
+    --shadow:      rgba(0, 0, 0, 0.35);
+    --shadow-soft: rgba(0, 0, 0, 0.22);
+    --shadow-deep: rgba(0, 0, 0, 0.6);
+    --map-bg:    #22201a;
+    --chrome-hi: #0f0e0a; --chrome-lo: #0a0907;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --ink:      #e9e1cf;
+    --ink-soft: #a89f8b;
+    --paper:    #171510;
+    --paper-2:  #1e1b14;
+    --paper-hi: #221f18;
+    --paper-lo: #131109;
+    --cinnabar: #d97a4e;
+    --cinnabar-soft: #b9633c;
+    --jade:     #8caa8c;
+    --gold:     #c9a65c;
+    --line:     #3a3426;
+    --seal-ink:  #fdf6e8;
+    --sheen:     rgba(255, 255, 255, 0.04);
+    --scrim:     rgba(0, 0, 0, 0.66);
+    --shadow:      rgba(0, 0, 0, 0.35);
+    --shadow-soft: rgba(0, 0, 0, 0.22);
+    --shadow-deep: rgba(0, 0, 0, 0.6);
+    --map-bg:    #22201a;
+    --chrome-hi: #0f0e0a; --chrome-lo: #0a0907;
+    color-scheme: dark;
+}
+/* 页眉上方那条站点标签：亮时选中的标签是纸色底、深字；暗时纸也是深的，字改用墨色。 */
+:root[data-theme="dark"] .tabrow-works .tabstrip-tab.active { color: var(--ink); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tabrow-works .tabstrip-tab.active { color: var(--ink); }
+}
+/* 地图瓦片是亮的，夜里反色再转回色相，水还是水色。配图不动，画就是画。 */
+:root[data-theme="dark"] .leaflet-tile,
+:root[data-theme="dark"] .leaflet-control-attribution { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile,
+  :root:not([data-theme="light"]) .leaflet-control-attribution { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+}
+
 #fontTag { position: fixed; left: 10px; bottom: 9px; z-index: 90;
   font: 10px/1 ui-monospace, Menlo, monospace; letter-spacing: 1px;
   color: var(--ink-soft); opacity: .45; pointer-events: none; }
@@ -691,6 +752,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   transition: color .16s, border-color .16s;
 }
 .lang-toggle:hover { color: var(--cinnabar); border-color: var(--cinnabar-soft); }
+.theme-toggle { margin-left: 6px; padding: 0 7px; font-size: 13px; line-height: 18px; }
 
 /* ============ 配画投稿 ============ */
 .pd-suggest { text-align: center; margin-top: 18px; padding-top: 14px;

@@ -1053,10 +1053,33 @@
       T.set(T.isEn() ? "zh" : "en");
       exBuilt = false;              // 探索页是一次性搭起来的，换语言要重搭
       applyChrome();
+      paintTheme();
       route();
     });
     var brand = $(".brand");
     if (brand) brand.addEventListener("click", function () { go("/"); });
+
+    // 明暗：没选过就跟系统；点一下就定下来，压过系统，再点换回去
+    var tt = $("#themeToggle");
+    function isDark() {
+      var th = document.documentElement.getAttribute("data-theme");
+      if (th) return th === "dark";
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function paintTheme() {
+      if (!tt) return;
+      tt.textContent = isDark() ? "☀" : "☾";
+      var tip = isDark() ? T("日间") : T("夜读");
+      tt.setAttribute("title", tip); tt.setAttribute("aria-label", tip);
+    }
+    if (tt) tt.addEventListener("click", function () {
+      var next = isDark() ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+      paintTheme();
+    });
+    if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintTheme);
+    paintTheme();
 
     var box = $("#search"), timer = null;
     box.addEventListener("input", function () {

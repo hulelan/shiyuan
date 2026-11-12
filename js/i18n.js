@@ -68,7 +68,7 @@ window.T = (function () {
 
     /* ---- 首页 ---- */
     "释　文": "Read",
-    "上一篇": "Back",
+    "上一篇": "Back", "夜读": "Dark mode", "日间": "Light mode",
     "换一篇": "Another",
 
     /* ---- 作者 ---- */
