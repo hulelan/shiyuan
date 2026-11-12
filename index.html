@@ -11,9 +11,9 @@
   <script>/* 先于样式表定下明暗，省得闪一下白 */
     try { var th = localStorage.getItem("theme"); if (th === "dark" || th === "light") document.documentElement.setAttribute("data-theme", th); } catch (e) {}
   </script>
-  <link rel="stylesheet" href="css/shell.css?b=0801bb7">
-  <link rel="stylesheet" href="css/fonts.css?b=0801bb7">
-  <link rel="stylesheet" href="css/style.css?b=0801bb7">
+  <link rel="stylesheet" href="css/shell.css?b=22dc2ce">
+  <link rel="stylesheet" href="css/fonts.css?b=22dc2ce">
+  <link rel="stylesheet" href="css/style.css?b=22dc2ce">
 </head>
 <body>
   <!-- cross-site tab strip -->
@@ -37,7 +37,7 @@
     </div>
     <!-- 只换界面语言，诗文不译。字号压到最小，不跟导航抢位置。 -->
     <button class="lang-toggle" id="langToggle" title="Read the interface in English">EN</button>
-    <button class="lang-toggle theme-toggle" id="themeToggle" title="夜读" aria-label="夜读">☾</button>
+    <button class="theme-toggle" id="themeToggle" type="button" title="夜读" aria-label="夜读"></button>
   </header>
 
   <main id="main">
@@ -75,8 +75,8 @@
     }
   })();
   </script>
-  <script src="js/i18n.js?b=0801bb7"></script>
-  <script src="js/store.js?b=0801bb7"></script>
-  <script src="js/app.js?b=0801bb7"></script>
+  <script src="js/i18n.js?b=22dc2ce"></script>
+  <script src="js/store.js?b=22dc2ce"></script>
+  <script src="js/app.js?b=22dc2ce"></script>
 </body>
 </html>

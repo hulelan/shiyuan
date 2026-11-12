@@ -1068,7 +1068,6 @@
     }
     function paintTheme() {
       if (!tt) return;
-      tt.textContent = isDark() ? "☀" : "☾";
       var tip = isDark() ? T("日间") : T("夜读");
       tt.setAttribute("title", tip); tt.setAttribute("aria-label", tip);
     }

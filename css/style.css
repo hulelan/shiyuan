@@ -31,6 +31,11 @@
   --chrome-hi: #232019; --chrome-lo: #17150f;
   --chrome-ink: #a9a08c; --chrome-ink-hi: #f2ece0;
 
+  /* 明暗开关是两个圆：亮盘上压一个纸色的盘，错开一点就咬成月牙（亮时）；
+     暗时压盘透明，只剩整个亮盘，是太阳。lelanhu.com 上同一个画法。 */
+  --toggle-carve: var(--paper);
+  --toggle-shift: translate(34%, -22%);
+
   /* ---- 字体 -------------------------------------------------------------
      三副，各司其职。关键是**拉丁字体排在中文字体之前**：
      宋体自带一副拉丁字母，字宽字重都不对；只要宋体排在前面，
@@ -90,6 +95,8 @@
     --shadow-deep: rgba(0, 0, 0, 0.6);
     --map-bg:    #22201a;
     --chrome-hi: #0f0e0a; --chrome-lo: #0a0907;
+    --toggle-carve: transparent;
+    --toggle-shift: none;
     color-scheme: dark;
   }
 }
@@ -113,6 +120,8 @@
     --shadow-deep: rgba(0, 0, 0, 0.6);
     --map-bg:    #22201a;
     --chrome-hi: #0f0e0a; --chrome-lo: #0a0907;
+    --toggle-carve: transparent;
+    --toggle-shift: none;
     color-scheme: dark;
 }
 /* 页眉上方那条站点标签：亮时选中的标签是纸色底、深字；暗时纸也是深的，字改用墨色。 */
@@ -752,7 +761,18 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
   transition: color .16s, border-color .16s;
 }
 .lang-toggle:hover { color: var(--cinnabar); border-color: var(--cinnabar-soft); }
-.theme-toggle { margin-left: 6px; padding: 0 7px; font-size: 13px; line-height: 18px; }
+.theme-toggle {
+  position: relative; margin-left: 6px; width: 24px; height: 24px; padding: 0;
+  border: none; background: none; color: var(--gold); cursor: pointer;
+  transition: color .16s, opacity .16s;
+}
+.theme-toggle:hover { color: var(--cinnabar); border: none; }
+.theme-toggle::before, .theme-toggle::after {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%;
+}
+.theme-toggle::before { background: currentColor; }
+.theme-toggle::after { background: var(--toggle-carve); transform: var(--toggle-shift); }
 
 /* ============ 配画投稿 ============ */
 .pd-suggest { text-align: center; margin-top: 18px; padding-top: 14px;
