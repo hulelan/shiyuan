@@ -117,8 +117,8 @@
       var art = res[1] || []; authorPy = res[2] || {};
       var artMap = {};
       art.forEach(function (a) { artMap[a.poem] = a; });
-      // 配了画的那几篇抽中的机会放大六倍：画是特意配的，不该一年才碰上一回
-      homePool = res[0].map(function (r) { return artMap[r[0]] ? [r[0], r[1] * 6] : r; });
+      // 配了画的那几篇抽中的机会放大一倍：画是特意配的，但首页还是以诗为主
+      homePool = res[0].map(function (r) { return artMap[r[0]] ? [r[0], r[1] * 2] : r; });
       if (!homePool.length) return failed(host, new Error("首页候选为空"));
       if (homeAt < 0) { homeHist.push(drawHome(homePool)); homeAt = 0; }
       return Store.poemById(homeHist[homeAt]).then(function (p) {
