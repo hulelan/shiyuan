@@ -701,11 +701,11 @@
             '<p class="near-note">' + T("同一首作品在本库中的另一处著录，题名或归属或有出入。") +
             '</p><div class="near-list" id="nearDup"></div>';
         }
-        if (kin.length) {
-          html += '<h4 class="near-h">' + T("与此篇相近") + '</h4>' +
-            '<div class="near-list" id="nearKin"></div>';
-        }
-        host.innerHTML = html;
+        if (kin.length) html += '<div class="near-list" id="nearKin"></div>';
+        // 跟译文注释一样折起来，读完诗想看再点开
+        host.innerHTML = section(T("与此篇相近"), html);
+        var hd = $(".pd-sec-head", host);
+        if (hd) hd.addEventListener("click", function () { hd.parentNode.classList.toggle("open"); });
         dup.forEach(function (x) { $("#nearDup", host).appendChild(nearRow(x[0])); });
         kin.forEach(function (x) { $("#nearKin", host).appendChild(nearRow(x[0])); });
       });
@@ -925,26 +925,22 @@
           (p.place && p.place.name ? '<div class="pd-place">✎ ' + esc(p.place.name) +
             (p.place.modern ? '（' + esc(p.place.modern) + '）' : "") + '</div>' : "") +
         '</div>' +
-        '<div class="pd-poem' + (hasPy && !prosePoem ? "" : " no-pinyin") +
-          (prosePoem ? " prose" : "") + '" id="pdPoem">' +
+        '<div class="pd-poem no-pinyin' + (prosePoem ? " prose" : "") + '" id="pdPoem">' +
           bodyHtml +
         '</div>' +
-        (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' +
-          T(prosePoem ? "显示拼音" : "隐藏拼音") + '</button>' : "") +
+        (hasPy ? '<button class="pinyin-toggle" id="pyToggle">' + T("显示拼音") + '</button>' : "") +
         (pic ? '<div class="pd-art">' + artFigure(pic) + '</div>' : "") +
-        (p.enrichedBy ? '<div class="ai-note">' +
-          T("✦ 译文 / 注释 / 赏析 / 英译 由 AI（{by}）生成，待校订", { by: esc(p.enrichedBy) }) +
-          '</div>' : "") +
         '<div class="pd-sections">' + sec + '</div>' +
         '<div class="pd-near" id="pdNear"></div>' +
+        (p.enrichedBy ? '<div class="ai-note">' +
+          T("译文、注释、赏析由 {by} 生成，请自行斟酌", { by: esc(p.enrichedBy) }) +
+          '</div>' : "") +
         // 投稿口放在最下面：读完一篇，才谈得上想给它配什么画
         '<div class="pd-suggest"><a href="' + esc(artIssueUrl(p)) +
           '" target="_blank" rel="noopener" title="' +
           T("为这一篇推荐一幅画（会开一个 GitHub issue）") + '">✎ ' +
           T("推荐一幅画") + '</a></div>';
 
-      var secs = d.querySelectorAll(".pd-sec");
-      if (secs[0]) secs[0].classList.add("open");
       d.querySelectorAll(".pd-sec-head").forEach(function (h) {
         h.addEventListener("click", function () { h.parentNode.classList.toggle("open"); });
       });

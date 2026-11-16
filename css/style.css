@@ -366,10 +366,10 @@ main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
 }
 .count { text-align: center; color: var(--ink-soft); font-size: 11.5px; margin-top: 22px; letter-spacing: var(--track-label); }
 
+/* 模型生成的提示：放在最底下，一行小字，不加框不加星，看到就好，不必被看到 */
 .ai-note {
-  margin: 14px 0 2px; padding: 7px 12px; border-radius: 6px;
-  background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px dashed var(--gold);
-  color: var(--ink-soft); font-size: 12.5px; letter-spacing: var(--track-label); text-align: center;
+  margin: 22px 0 0; color: var(--ink-soft); opacity: .6; font-size: 11px;
+  letter-spacing: var(--track-label); text-align: center;
 }
 
 /* ---------- Theme cloud ---------- */
@@ -812,7 +812,8 @@ a.quiet:hover { color: var(--cinnabar); border-bottom-color: var(--cinnabar); }
 /* ============ 与此篇相近 ============ */
 /* 排在赏析之后、投稿口之前：读完一篇，才谈得上"还有哪些像它"。 */
 .pd-near:empty { display: none; }
-.pd-near { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pd-near { margin-top: 0; }
+.pd-near .near-list { margin-top: 4px; }
 .near-h {
   margin: 0 0 8px; font-size: 12px; letter-spacing: var(--track-title); color: var(--cinnabar);
 }
